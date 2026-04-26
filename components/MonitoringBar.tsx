@@ -123,10 +123,10 @@ export default function MonitoringBar() {
           </button>
         </div>
 
-        {/* Row 2: Vol slider */}
+        {/* Row 2: Vol/Trim slider */}
         <div className="flex flex-col gap-1">
           <div className="flex justify-between">
-            <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Vol</span>
+            <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Trim</span>
             <span className="text-[9px] font-mono text-white/20 tabular-nums">{Math.round(masterVolume * 100)}%</span>
           </div>
           <input

@@ -15,16 +15,18 @@ export default function Waveform() {
   const dimsRef = useRef({ width: 0, height: 0, dpr: 1 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { tracks, activeTrackId, seek, addTracks, setHoveredNoteId } = useMixFlipStore(useShallow((s) => ({
+  const { tracks, activeTrackId, isPlaying, seek, addTracks, setHoveredNoteId } = useMixFlipStore(useShallow((s) => ({
     tracks: s.tracks,
     activeTrackId: s.activeTrackId,
+    isPlaying: s.isPlaying,
     seek: s.seek,
     addTracks: s.addTracks,
     setHoveredNoteId: s.setHoveredNoteId,
   })));
   const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
 
-  const [dragging, setDragging] = useState(false);
+  const [fileDragging, setFileDragging] = useState(false);
+  const [scrubbing, setScrubbing] = useState(false);
 
   const currentTime = useSyncExternalStore(
     audioEngine.subscribeToTime,
@@ -124,14 +126,29 @@ export default function Waveform() {
     ctx.restore();
   }, [currentTime, activeTrackId, activeTrack?.duration, activeTrack?.color, activeTrack?.notes]);
 
-  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!activeTrack || activeTrack.duration <= 0) return;
-    const rect = fgCanvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    seek((x / rect.width) * activeTrack.duration);
-  }, [activeTrack?.duration, seek]);
+  const getTimeFromPointer = useCallback((clientX: number): number => {
+    const canvas = fgCanvasRef.current;
+    if (!canvas || !activeTrack || activeTrack.duration <= 0) return 0;
+    const rect = canvas.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * activeTrack.duration;
+  }, [activeTrack?.duration]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!activeTrack || activeTrack.duration <= 0) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const t = getTimeFromPointer(e.clientX);
+    setScrubbing(true);
+    if (!isPlaying) audioEngine.previewSeek(t);
+  }, [activeTrack?.duration, isPlaying, getTimeFromPointer]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (scrubbing) {
+      const t = getTimeFromPointer(e.clientX);
+      if (!isPlaying) audioEngine.previewSeek(t);
+      return;
+    }
+    // Note hover — mouse only (pointer type check avoids touch false-positives)
+    if (e.pointerType === 'touch') return;
     if (!activeTrack || activeTrack.duration <= 0 || activeTrack.notes.length === 0) return;
     const rect = fgCanvasRef.current!.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -141,11 +158,17 @@ export default function Waveform() {
       return Math.abs(x - nx) <= HIT_PX;
     });
     setHoveredNoteId(hit?.id ?? null);
-  }, [activeTrack?.duration, activeTrack?.notes, setHoveredNoteId]);
+  }, [scrubbing, isPlaying, getTimeFromPointer, activeTrack?.duration, activeTrack?.notes, setHoveredNoteId]);
 
-  const handleMouseLeave = useCallback(() => {
-    setHoveredNoteId(null);
-  }, [setHoveredNoteId]);
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!scrubbing) return;
+    setScrubbing(false);
+    seek(getTimeFromPointer(e.clientX));
+  }, [scrubbing, getTimeFromPointer, seek]);
+
+  const handlePointerLeave = useCallback(() => {
+    if (!scrubbing) setHoveredNoteId(null);
+  }, [scrubbing, setHoveredNoteId]);
 
   // ── Drop zone handlers ────────────────────────────────────────────────────
   const handleFiles = useCallback((files: FileList | File[]) => {
@@ -155,12 +178,12 @@ export default function Waveform() {
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    setDragging(false);
+    setFileDragging(false);
     handleFiles(e.dataTransfer.files);
   }, [handleFiles]);
 
-  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragging(true); };
-  const onDragLeave = () => setDragging(false);
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setFileDragging(true); };
+  const onDragLeave = () => setFileDragging(false);
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) handleFiles(e.target.files);
     e.target.value = '';
@@ -176,7 +199,7 @@ export default function Waveform() {
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      style={dragging ? { boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.18)' } : undefined}
+      style={fileDragging ? { boxShadow: 'inset 0 0 0 2px rgba(255,255,255,0.18)' } : undefined}
     >
       {/* Empty / loading state */}
       {isEmpty && (
@@ -203,7 +226,7 @@ export default function Waveform() {
               <span
                 className="font-mono text-sm uppercase tracking-[0.18em]"
                 style={{
-                  color: dragging ? 'rgba(255,255,255,0.55)' : labelHover ? 'rgba(255,255,255,0.48)' : 'rgba(255,255,255,0.22)',
+                  color: fileDragging ? 'rgba(255,255,255,0.55)' : labelHover ? 'rgba(255,255,255,0.48)' : 'rgba(255,255,255,0.22)',
                   transition: 'color 150ms',
                 }}
               >
@@ -224,10 +247,14 @@ export default function Waveform() {
       <canvas
         ref={fgCanvasRef}
         className="absolute inset-0 w-full h-full"
-        style={{ cursor: isEmpty ? 'default' : 'pointer' }}
-        onClick={handleClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
+        style={{
+          cursor: isEmpty ? 'default' : scrubbing ? 'grabbing' : 'pointer',
+          touchAction: 'none',
+        }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerLeave}
       />
     </div>
   );

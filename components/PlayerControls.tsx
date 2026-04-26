@@ -174,6 +174,21 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
         <div className="flex items-center gap-2">
           <span className="lcd shrink-0">{formatTime(displayTime)}</span>
 
+          {/* Mobile wordmark — fills the space where LED sits on desktop */}
+          <div className="sm:hidden flex-1 flex items-center justify-end select-none">
+            <span
+              className="font-bold text-lg tracking-tight"
+              style={{ fontFamily: 'var(--font-display)', color: 'rgba(232,221,208,0.35)' }}
+            >
+              Mix<span
+                style={{
+                  color: '#d93a2c',
+                  textShadow: '0 0 14px rgba(217,58,44,0.5), 0 0 5px rgba(217,58,44,0.3)',
+                }}
+              >Flip</span>
+            </span>
+          </div>
+
           {/* LED dot-matrix display — desktop only; mobile uses NowPlayingStrip */}
           <div className="hidden sm:block pipboy-screen flex-1 overflow-hidden relative self-stretch">
             <LEDDisplay

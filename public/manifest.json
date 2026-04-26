@@ -4,8 +4,8 @@
   "description": "Compare mix revisions and reference tracks with sample-accurate switching",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f0f",
-  "theme_color": "#0f0f0f",
+  "background_color": "#201d18",
+  "theme_color": "#201d18",
   "icons": [
     {
       "src": "/icon-192.png",

@@ -13,7 +13,7 @@ function formatTime(seconds: number): string {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-export default function PlayerControls() {
+export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: boolean }) {
 
   const { tracks, activeTrackId, activeGroup, isPlaying, togglePlay, seek, cycleTrack, switchGroup, triggerRefPulse } =
     useMixFlipStore(useShallow((s) => ({
@@ -78,6 +78,7 @@ export default function PlayerControls() {
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
+    if (noKeyboard) return;
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName.toLowerCase();
       if (tag === 'input' || tag === 'textarea') return;
@@ -112,7 +113,7 @@ export default function PlayerControls() {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [hasBuffer, liveTime, duration, togglePlay, seek, cycleTrack, switchGroup, activeGroup, hasBothGroups]);
+  }, [noKeyboard, hasBuffer, liveTime, duration, togglePlay, seek, cycleTrack, switchGroup, activeGroup, hasBothGroups]);
 
   return (
     <div className="flex items-center gap-4">
@@ -146,8 +147,8 @@ export default function PlayerControls() {
         <div className="flex items-center gap-2">
           <span className="lcd shrink-0">{formatTime(displayTime)}</span>
 
-          {/* LED dot-matrix display — matches LCD height via self-stretch */}
-          <div className="pipboy-screen flex-1 overflow-hidden relative self-stretch">
+          {/* LED dot-matrix display — desktop only; mobile uses NowPlayingStrip */}
+          <div className="hidden sm:block pipboy-screen flex-1 overflow-hidden relative self-stretch">
             <LEDDisplay
               label={activeTrack?.label ?? ''}
               color={activeTrack?.color ?? 'rgba(255,255,255,0.15)'}
@@ -258,9 +259,9 @@ export default function PlayerControls() {
         </div>
       </div>
 
-      {/* Group toggle */}
+      {/* Group toggle — desktop only; mobile uses MobileTrackStrip seg-control */}
       <div
-        className="split-circle transition-opacity duration-200"
+        className="hidden sm:flex split-circle transition-opacity duration-200"
         style={{ opacity: hasBothGroups ? 1 : 0.2 }}
       >
         <button

@@ -10,6 +10,8 @@ import TrackInfo from '@/components/TrackInfo';
 import PlayerControls from '@/components/PlayerControls';
 import MonitoringBar from '@/components/MonitoringBar';
 import TimestampNotes from '@/components/TimestampNotes';
+import MobileTrackStrip from '@/components/MobileTrackStrip';
+import NowPlayingStrip from '@/components/NowPlayingStrip';
 
 export default function Home() {
   const { hasMixes, hasRefs } = useMixFlipStore(useShallow((s) => ({
@@ -20,45 +22,62 @@ export default function Home() {
   const hasAny = hasMixes || hasRefs;
 
   return (
-    <main className="min-h-screen flex flex-col overflow-x-hidden">
-      <div className="w-full max-w-3xl mx-auto px-4 flex flex-col flex-1 pb-8">
-        <Header />
+    <main className="flex flex-col h-dvh sm:h-auto sm:min-h-screen overflow-x-hidden">
+      <div className="w-full max-w-3xl mx-auto px-4 flex flex-col flex-1 min-h-0">
 
-        <div className="flex flex-col gap-4 flex-1">
-          {/* ── References section ───────────────────────────────────────── */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="text-white/20 text-[10px] font-mono uppercase tracking-[0.22em] shrink-0">
-                References
-              </span>
-              <div className="flex-1" style={{ borderTop: '1px solid rgba(58,52,46,0.6)' }} />
+        {/* Desktop header — hidden on mobile */}
+        <div className="hidden sm:block">
+          <Header />
+        </div>
+
+        {/* ── Scrollable content ──────────────────────────────────────────── */}
+        <div className="flex-1 min-h-0 overflow-y-auto sm:overflow-visible flex flex-col gap-4 py-4 sm:py-0">
+
+          {/* Mobile: segmented REF/MIX strip with scrollable tabs */}
+          <div className="sm:hidden shrink-0">
+            <MobileTrackStrip />
+          </div>
+
+          {/* Desktop: References + Mixes sections */}
+          <div className="hidden sm:flex flex-col gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="text-white/20 text-[10px] font-mono uppercase tracking-[0.22em] shrink-0">
+                  References
+                </span>
+                <div className="flex-1" style={{ borderTop: '1px solid rgba(58,52,46,0.6)' }} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <VersionTabs group="reference" />
+                <DropZone trackType="reference" maxTracks={5} compact />
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <VersionTabs group="reference" />
-              <DropZone trackType="reference" maxTracks={5} compact />
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <span className="text-white/20 text-[10px] font-mono uppercase tracking-[0.22em] shrink-0">
+                  Mixes
+                </span>
+                <div className="flex-1" style={{ borderTop: '1px solid rgba(58,52,46,0.6)' }} />
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <VersionTabs group="mix" />
+                <DropZone trackType="mix" maxTracks={8} compact />
+              </div>
             </div>
           </div>
 
-          {/* ── Mixes section ─────────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <span className="text-white/20 text-[10px] font-mono uppercase tracking-[0.22em] shrink-0">
-                Mixes
-              </span>
-              <div className="flex-1" style={{ borderTop: '1px solid rgba(58,52,46,0.6)' }} />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <VersionTabs group="mix" />
-              <DropZone trackType="mix" maxTracks={8} compact />
-            </div>
+          {/* Mobile: NowPlayingStrip above the waveform */}
+          <div className="sm:hidden shrink-0">
+            <NowPlayingStrip />
           </div>
 
-          {/* ── Waveform — always visible, acts as drop zone when empty ──── */}
+          {/* Waveform — always visible */}
           <Waveform />
 
-          {/* ── Player + monitoring — ghosted when nothing loaded ─────────── */}
+          {/* Desktop: TrackInfo + Player + Monitoring */}
           <div
-            className="flex flex-col gap-4 transition-opacity duration-300"
+            className="hidden sm:flex flex-col gap-4 transition-opacity duration-300"
             style={{
               opacity: hasAny ? 1 : 0.22,
               pointerEvents: hasAny ? 'auto' : 'none',
@@ -69,26 +88,42 @@ export default function Home() {
             <MonitoringBar />
           </div>
 
-          <div style={{ borderTop: '1px solid rgba(58,52,46,0.5)' }} />
+          <div className="hidden sm:block" style={{ borderTop: '1px solid rgba(58,52,46,0.5)' }} />
 
-          {/* ── Notes screen — manages its own ghost state ────────────────── */}
+          {/* Notes */}
           <TimestampNotes />
+
+          {/* Footer */}
+          <footer className="hidden sm:block mt-auto pt-8 pb-8 text-center">
+            <p className="text-cream/[0.15] text-xs font-mono">
+              MixFlip by{' '}
+              <a
+                href="https://hornsupaudio.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-white/30 transition-colors"
+              >
+                HornsUP Audio
+              </a>
+              {' '}— Your files never leave this device.
+            </p>
+          </footer>
         </div>
 
-        <footer className="mt-auto pt-8 text-center">
-          <p className="text-cream/[0.15] text-xs font-mono">
-            MixFlip by{' '}
-            <a
-              href="https://hornsupaudio.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-white/30 transition-colors"
-            >
-              HornsUP Audio
-            </a>
-            {' '}— Your files never leave this device.
-          </p>
-        </footer>
+        {/* ── Mobile sticky bottom: Player + Monitoring ───────────────────── */}
+        {/* noKeyboard — keyboard is handled by the desktop PlayerControls instance */}
+        <div
+          className="sm:hidden shrink-0 flex flex-col gap-3 pt-3 pb-3 border-t transition-opacity duration-300"
+          style={{
+            borderTopColor: '#1a1714',
+            opacity: hasAny ? 1 : 0.22,
+            pointerEvents: hasAny ? 'auto' : 'none',
+          }}
+        >
+          <PlayerControls noKeyboard />
+          <MonitoringBar />
+        </div>
+
       </div>
     </main>
   );

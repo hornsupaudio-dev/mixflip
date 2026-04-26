@@ -6,9 +6,10 @@ import { useMixFlipStore, type Track, type TrackType } from '@/store/mixflipStor
 
 interface Props {
   group: TrackType;
+  scroll?: boolean; // horizontal-scroll mode for mobile strip
 }
 
-export default function VersionTabs({ group }: Props) {
+export default function VersionTabs({ group, scroll = false }: Props) {
   const { tracks, activeTrackId, setActiveTrack, removeTrack, updateLabel, setTrackType } =
     useMixFlipStore(useShallow((s) => ({
       tracks: s.tracks,
@@ -23,7 +24,7 @@ export default function VersionTabs({ group }: Props) {
   if (groupTracks.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-2 items-end">
+    <div className={scroll ? 'flex flex-nowrap gap-2 items-end' : 'flex flex-wrap gap-2 items-end'}>
       {groupTracks.map((track) => (
         <Tab
           key={track.id}

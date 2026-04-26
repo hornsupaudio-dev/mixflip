@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import IRLoader from '@/components/IRLoader';
 
 export default function Header() {
   const [showKeys, setShowKeys] = useState(false);
@@ -19,7 +18,6 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-4">
-        <IRLoader />
         <button
           onClick={() => setShowKeys((v) => !v)}
           className="btn-3d hidden sm:block"

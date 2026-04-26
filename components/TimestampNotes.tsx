@@ -40,7 +40,6 @@ export default function TimestampNotes() {
   const [draft, setDraft] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState('');
-  // React handles both hover and playhead highlights via class toggles (CSS :hover unreliable under 60fps re-renders)
   const [litNotes, setLitNotes] = useState<Set<string>>(new Set());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
@@ -51,12 +50,12 @@ export default function TimestampNotes() {
   );
 
   const activeTrack = tracks.find((t) => t.id === activeTrackId);
-  // Notes panel shows pinned track (if set) or follows the active track
   const isPinned = !!pinnedNotesTrackId;
   const notesTrack = isPinned
     ? (tracks.find((t) => t.id === pinnedNotesTrackId) ?? activeTrack)
     : activeTrack;
   const isActive = !!notesTrack;
+  const hasNotes = (notesTrack?.notes.length ?? 0) > 0;
   const phosphor = notesTrack?.color ?? DEAD_COLOR;
 
   const handleTogglePin = () => {
@@ -108,7 +107,7 @@ export default function TimestampNotes() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleExport = () => {
-    if (!notesTrack || notesTrack.notes.length === 0) return;
+    if (!notesTrack || !hasNotes) return;
     const lines = notesTrack.notes.map((n) => `${formatTime(n.time)}\t${n.text}`).join('\r\n');
     const blob = new Blob([lines], { type: 'text/plain' });
     const url  = URL.createObjectURL(blob);
@@ -120,7 +119,7 @@ export default function TimestampNotes() {
   };
 
   const handleEmailExport = () => {
-    if (!notesTrack) return;
+    if (!notesTrack || !hasNotes) return;
     const lines = notesTrack.notes.map((n) => `${formatTime(n.time)} — ${n.text}`).join('\n');
     window.open(`mailto:?subject=${encodeURIComponent(`Notes: ${notesTrack.label}`)}&body=${encodeURIComponent(lines)}`);
   };
@@ -158,146 +157,160 @@ export default function TimestampNotes() {
         transition: 'opacity 300ms ease, box-shadow 150ms',
       }}
     >
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="notes-screen-header flex-col items-start gap-1 sm:flex-row sm:items-center">
-        {/* Row 1: dot + label */}
-        <div className="flex items-center gap-2 min-w-0 w-full">
-          <span
-            className="w-1.5 h-1.5 rounded-full shrink-0"
-            style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
-          />
-          <span className="font-mono text-[12px] uppercase tracking-wider truncate" style={{ color: phosphor }}>
-            {notesTrack ? `${truncateMiddle(notesTrack.label)} : Notes` : '— : Notes'}
-          </span>
-        </div>
+      <div className="flex gap-3 flex-1 min-h-0">
 
-        {/* Row 2 (mobile) / same row (desktop): action buttons */}
-        {isActive && (
-          <div className="flex items-center gap-3 sm:ml-auto shrink-0">
-            {notesTrack.notes.length > 0 && (
-              <span className="font-mono text-[10px]" style={{ color: `${phosphor}45` }}>
-                {notesTrack.notes.length}
+        {/* ── Left column: header + list + input ────────────────────────── */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
+
+          {/* Header: dot + label + count */}
+          <div className="notes-screen-header flex items-center gap-2">
+            <span
+              className="w-1.5 h-1.5 rounded-full shrink-0"
+              style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
+            />
+            <span className="font-mono text-[12px] uppercase tracking-wider truncate" style={{ color: phosphor }}>
+              {notesTrack ? `${truncateMiddle(notesTrack.label)} : Notes` : '— : Notes'}
+            </span>
+            {hasNotes && (
+              <span className="font-mono text-[10px] shrink-0 ml-1" style={{ color: `${phosphor}45` }}>
+                {notesTrack!.notes.length}
               </span>
             )}
-            <button
-              onClick={handleTogglePin}
-              title={isPinned ? 'Unpin — notes follow active track' : 'Pin notes to this track'}
-              className="terminal-btn transition-all duration-150"
-              style={{
-                color: phosphor,
-                opacity: isPinned ? 1 : 0.35,
-                boxShadow: isPinned ? `0 0 6px ${phosphor}55, inset 0 0 0 1px ${phosphor}55` : undefined,
-                textShadow: isPinned ? `0 0 8px ${phosphor}` : undefined,
-              }}
-            >
-              {isPinned ? 'PINNED' : 'PIN'}
-            </button>
-            {notesTrack.notes.length > 0 && (
-              <>
-                <button onClick={handleExport} className="terminal-btn" style={{ color: phosphor }} title="Download .txt">
-                  TXT
-                </button>
-                <button onClick={handleEmailExport} className="terminal-btn" style={{ color: phosphor }} title="Share via email">
-                  EMAIL
-                </button>
-              </>
-            )}
           </div>
-        )}
-      </div>
 
-      {/* ── Note list — always rendered when active so input never jumps ── */}
-      {isActive && (
-        <ul className="notes-screen-list space-y-1.5 pr-1">
-          {notesTrack.notes.map((note) => (
-            <li
-              key={note.id}
-              onMouseEnter={() => setHoveredId(note.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              className={['group flex items-start gap-2.5', litNotes.has(note.id) || hoveredId === note.id || hoveredNoteId === note.id ? 'note-lit' : ''].join(' ')}
-            >
-              <button
-                onClick={() => {
-                  // Switch to pinned track first if it differs from active
-                  if (notesTrack.id !== activeTrackId) {
-                    setActiveTrack(notesTrack.id);
-                    setTimeout(() => seek(note.time), 0);
-                  } else {
-                    seek(note.time);
-                  }
-                }}
-                className="font-mono text-[13px] shrink-0 mt-0.5 tabular-nums w-11 text-left transition-opacity hover:opacity-100"
-                style={{ color: phosphor, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                title="Jump to this timestamp"
-              >
-                {formatTime(note.time)}
-              </button>
-
-              {editingId === note.id ? (
-                <input
-                  autoFocus
-                  value={editDraft}
-                  onChange={(e) => setEditDraft(e.target.value)}
-                  onBlur={() => commitEdit(note.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitEdit(note.id);
-                    if (e.key === 'Escape') setEditingId(null);
-                    e.stopPropagation();
-                  }}
-                  className="flex-1 bg-transparent font-mono text-[13px] outline-none px-1 py-0.5"
-                  style={{ color: phosphor, border: `1px solid ${phosphor}45`, background: `${phosphor}08`, borderRadius: '2px', caretColor: phosphor }}
-                />
-              ) : (
-                <span
-                  onDoubleClick={() => { setEditingId(note.id); setEditDraft(note.text); }}
-                  className="flex-1 font-mono text-[13px] leading-relaxed cursor-text"
-                  style={{ color: phosphor }}
-                  title="Double-click to edit"
+          {/* Note list */}
+          {isActive && (
+            <ul className="notes-screen-list space-y-1.5 pr-1">
+              {notesTrack!.notes.map((note) => (
+                <li
+                  key={note.id}
+                  onMouseEnter={() => setHoveredId(note.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  className={['group flex items-start gap-2.5', litNotes.has(note.id) || hoveredId === note.id || hoveredNoteId === note.id ? 'note-lit' : ''].join(' ')}
                 >
-                  {note.text}
-                </span>
-              )}
+                  <button
+                    onClick={() => {
+                      if (notesTrack!.id !== activeTrackId) {
+                        setActiveTrack(notesTrack!.id);
+                        setTimeout(() => seek(note.time), 0);
+                      } else {
+                        seek(note.time);
+                      }
+                    }}
+                    className="font-mono text-[13px] shrink-0 mt-0.5 tabular-nums w-11 text-left transition-opacity hover:opacity-100"
+                    style={{ color: phosphor, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                    title="Jump to this timestamp"
+                  >
+                    {formatTime(note.time)}
+                  </button>
 
-              <button
-                onClick={() => removeNote(notesTrack.id, note.id)}
-                className="opacity-0 group-hover:opacity-50 transition-opacity duration-150 shrink-0 font-mono text-[10px] mt-0.5"
-                style={{ color: phosphor }}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                  {editingId === note.id ? (
+                    <input
+                      autoFocus
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onBlur={() => commitEdit(note.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') commitEdit(note.id);
+                        if (e.key === 'Escape') setEditingId(null);
+                        e.stopPropagation();
+                      }}
+                      className="flex-1 bg-transparent font-mono text-[13px] outline-none px-1 py-0.5"
+                      style={{ color: phosphor, border: `1px solid ${phosphor}45`, background: `${phosphor}08`, borderRadius: '2px', caretColor: phosphor }}
+                    />
+                  ) : (
+                    <span
+                      onDoubleClick={() => { setEditingId(note.id); setEditDraft(note.text); }}
+                      className="flex-1 font-mono text-[13px] leading-relaxed cursor-text"
+                      style={{ color: phosphor }}
+                      title="Double-click to edit"
+                    >
+                      {note.text}
+                    </span>
+                  )}
 
-      {/* ── Input — sits right below the list, grows with it ──────────── */}
-      <div className="notes-screen-input flex items-center gap-2">
-        <span
-          className="font-mono text-[13px] tabular-nums shrink-0 w-11"
-          style={{ color: phosphor }}
-        >
-          {formatTime(currentTime)}<span style={{ opacity: 0.6 }}>›</span>
-        </span>
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleAdd();
-            if (e.key === 'n' || e.key === 'N') e.stopPropagation();
-          }}
-          placeholder={isActive ? 'note at current position…' : ''}
-          disabled={!isActive}
-          className="flex-1 font-mono text-[13px] bg-transparent outline-none placeholder:opacity-30 disabled:cursor-default"
-          style={{ color: phosphor, borderBottom: `1px solid ${phosphor}55`, paddingBottom: '2px', caretColor: phosphor }}
-        />
-        <button
-          onClick={handleAdd}
-          disabled={!draft.trim() || !isActive}
-          className="terminal-btn disabled:opacity-20 disabled:cursor-not-allowed"
-          style={{ color: phosphor }}
-        >
-          + Note
-        </button>
+                  <button
+                    onClick={() => removeNote(notesTrack!.id, note.id)}
+                    className="opacity-0 group-hover:opacity-50 transition-opacity duration-150 shrink-0 font-mono text-[10px] mt-0.5"
+                    style={{ color: phosphor }}
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Input row — press Enter to add */}
+          <div className="notes-screen-input flex items-center gap-2">
+            <span
+              className="font-mono text-[13px] tabular-nums shrink-0 w-11"
+              style={{ color: phosphor }}
+            >
+              {formatTime(currentTime)}<span style={{ opacity: 0.6 }}>›</span>
+            </span>
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAdd();
+                if (e.key === 'n' || e.key === 'N') e.stopPropagation();
+              }}
+              placeholder={isActive ? 'note at current position…' : ''}
+              disabled={!isActive}
+              className="flex-1 font-mono text-[13px] bg-transparent outline-none placeholder:opacity-30 disabled:cursor-default"
+              style={{ color: phosphor, borderBottom: `1px solid ${phosphor}55`, paddingBottom: '2px', caretColor: phosphor }}
+            />
+          </div>
+        </div>
+
+        {/* ── Right sidebar: PIN / TXT / EMAIL always visible ───────────── */}
+        <div className="flex flex-col gap-1.5 shrink-0 justify-end pb-px">
+          {/* PIN — lit when active+pinned, dim when unavailable */}
+          <button
+            onClick={isActive ? handleTogglePin : undefined}
+            title={isPinned ? 'Unpin — notes follow active track' : 'Pin notes to this track'}
+            className="terminal-btn transition-all duration-150"
+            style={{
+              color: phosphor,
+              ...((!isActive) && { opacity: 0.12, pointerEvents: 'none' }),
+              ...(isActive && isPinned && {
+                opacity: 1,
+                boxShadow: `0 0 6px ${phosphor}55, inset 0 0 0 1px ${phosphor}55`,
+                textShadow: `0 0 8px ${phosphor}`,
+              }),
+            }}
+          >
+            {isPinned ? 'PIN·D' : 'PIN'}
+          </button>
+
+          {/* TXT — only interactive when there are notes */}
+          <button
+            onClick={isActive && hasNotes ? handleExport : undefined}
+            className="terminal-btn"
+            title="Download .txt"
+            style={{
+              color: phosphor,
+              ...(!isActive || !hasNotes ? { opacity: 0.12, pointerEvents: 'none' } : {}),
+            }}
+          >
+            TXT
+          </button>
+
+          {/* EMAIL — only interactive when there are notes */}
+          <button
+            onClick={isActive && hasNotes ? handleEmailExport : undefined}
+            className="terminal-btn"
+            title="Share via email"
+            style={{
+              color: phosphor,
+              ...(!isActive || !hasNotes ? { opacity: 0.12, pointerEvents: 'none' } : {}),
+            }}
+          >
+            EMAIL
+          </button>
+        </div>
+
       </div>
     </div>
   );

@@ -159,17 +159,21 @@ export default function TimestampNotes() {
       }}
     >
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="notes-screen-header">
-        <span
-          className="w-1.5 h-1.5 rounded-full shrink-0"
-          style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
-        />
-        <span className="font-mono text-[12px] uppercase tracking-wider" style={{ color: phosphor }}>
-          {notesTrack ? `${truncateMiddle(notesTrack.label)} : Notes` : '— : Notes'}
-        </span>
+      <div className="notes-screen-header flex-col items-start gap-1 sm:flex-row sm:items-center">
+        {/* Row 1: dot + label */}
+        <div className="flex items-center gap-2 min-w-0 w-full">
+          <span
+            className="w-1.5 h-1.5 rounded-full shrink-0"
+            style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
+          />
+          <span className="font-mono text-[12px] uppercase tracking-wider truncate" style={{ color: phosphor }}>
+            {notesTrack ? `${truncateMiddle(notesTrack.label)} : Notes` : '— : Notes'}
+          </span>
+        </div>
 
+        {/* Row 2 (mobile) / same row (desktop): action buttons */}
         {isActive && (
-          <div className="ml-auto flex items-center gap-3">
+          <div className="flex items-center gap-3 sm:ml-auto shrink-0">
             {notesTrack.notes.length > 0 && (
               <span className="font-mono text-[10px]" style={{ color: `${phosphor}45` }}>
                 {notesTrack.notes.length}

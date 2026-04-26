@@ -32,7 +32,7 @@ export default function NowPlayingStrip() {
   const label = ready ? buildLabel(activeTrack) : (activeTrack?.label ?? '');
 
   return (
-    <div className="pipboy-screen relative h-7 overflow-hidden">
+    <div className="pipboy-screen relative h-9 overflow-hidden">
       <LEDDisplay
         label={label}
         color={activeTrack?.color ?? 'rgba(255,255,255,0.15)'}

@@ -309,7 +309,14 @@ body::after {
     display: flex;
     flex-direction: column;
     transition: box-shadow 150ms ease-out;
-    height: 268px; /* fixed CRT terminal — never grows */
+    min-height: 220px; /* grows with header on mobile */
+    height: auto;
+  }
+
+  @media (min-width: 640px) {
+    .notes-screen {
+      height: 268px; /* fixed CRT terminal on desktop */
+    }
   }
 
   /* top-edge emboss */
@@ -350,7 +357,7 @@ body::after {
   }
 
   .notes-screen-list {
-    height: 176px; /* fixed — input never moves, notes scroll inside */
+    max-height: 176px; /* notes scroll inside, screen grows on mobile */
     overflow-y: auto;
     position: relative;
     z-index: 5;

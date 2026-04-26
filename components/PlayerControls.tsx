@@ -76,6 +76,33 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
     seek(getTimeFromPointer(e.clientX));
   };
 
+  // ── Media Session API — enables hardware volume / lock-screen controls ───
+  useEffect(() => {
+    if (noKeyboard || !('mediaSession' in navigator)) return;
+    navigator.mediaSession.setActionHandler('play', () => togglePlay());
+    navigator.mediaSession.setActionHandler('pause', () => togglePlay());
+    navigator.mediaSession.setActionHandler('seekbackward', () => seek(Math.max(0, liveTime - 5)));
+    navigator.mediaSession.setActionHandler('seekforward', () => seek(Math.min(duration, liveTime + 5)));
+    return () => {
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+      navigator.mediaSession.setActionHandler('seekbackward', null);
+      navigator.mediaSession.setActionHandler('seekforward', null);
+    };
+  }, [noKeyboard, togglePlay, seek, liveTime, duration]);
+
+  useEffect(() => {
+    if (noKeyboard || !('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+    if (activeTrack) {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: activeTrack.label,
+        artist: 'HornsUP Audio',
+        album: activeTrack.type === 'reference' ? 'Reference' : 'Mix',
+      });
+    }
+  }, [noKeyboard, isPlaying, activeTrack?.label, activeTrack?.type]);
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     if (noKeyboard) return;

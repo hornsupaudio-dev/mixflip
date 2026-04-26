@@ -67,9 +67,10 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Mobile: NowPlayingStrip above the waveform */}
-          <div className="sm:hidden shrink-0">
+          {/* Mobile: NowPlayingStrip + file info above the waveform */}
+          <div className="sm:hidden shrink-0 flex flex-col gap-1.5">
             <NowPlayingStrip />
+            <TrackInfo />
           </div>
 
           {/* Waveform — always visible */}

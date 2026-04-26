@@ -168,6 +168,7 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
           onPointerUp={handlePointerUp}
           className={['relative h-4 rounded-md select-none', hasBuffer ? 'cursor-pointer' : 'cursor-default'].join(' ')}
           style={{
+            touchAction: 'none',
             background: '#06040a',
             border: '1px solid #100d18',
             borderTopColor: '#1e1a2c',

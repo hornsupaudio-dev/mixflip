@@ -12,10 +12,16 @@ function formatTime(seconds: number): string {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
+function truncateMiddle(s: string, maxLen = 26): string {
+  if (s.length <= maxLen) return s;
+  const keep = Math.floor((maxLen - 1) / 2);
+  return `${s.slice(0, keep)}…${s.slice(-keep)}`;
+}
+
 const DEAD_COLOR = '#3a342e';
 
 export default function TimestampNotes() {
-  const { tracks, activeTrackId, isPlaying, addNote, removeNote, updateNote, hoveredNoteId, pinnedNotesTrackId, setPinnedNotesTrackId } = useMixFlipStore(
+  const { tracks, activeTrackId, isPlaying, addNote, removeNote, updateNote, hoveredNoteId, pinnedNotesTrackId, setPinnedNotesTrackId, seek, setActiveTrack } = useMixFlipStore(
     useShallow((s) => ({
       tracks: s.tracks,
       activeTrackId: s.activeTrackId,
@@ -26,6 +32,8 @@ export default function TimestampNotes() {
       hoveredNoteId: s.hoveredNoteId,
       pinnedNotesTrackId: s.pinnedNotesTrackId,
       setPinnedNotesTrackId: s.setPinnedNotesTrackId,
+      seek: s.seek,
+      setActiveTrack: s.setActiveTrack,
     })),
   );
 
@@ -157,7 +165,7 @@ export default function TimestampNotes() {
           style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
         />
         <span className="font-mono text-[12px] uppercase tracking-wider" style={{ color: phosphor }}>
-          {notesTrack ? `${notesTrack.label} : Notes` : '— : Notes'}
+          {notesTrack ? `${truncateMiddle(notesTrack.label)} : Notes` : '— : Notes'}
         </span>
 
         {isActive && (
@@ -200,17 +208,26 @@ export default function TimestampNotes() {
           {notesTrack.notes.map((note) => (
             <li
               key={note.id}
-              // CSS :hover handles dim→bright. React adds .note-lit for playhead highlight.
               onMouseEnter={() => setHoveredId(note.id)}
               onMouseLeave={() => setHoveredId(null)}
               className={['group flex items-start gap-2.5', litNotes.has(note.id) || hoveredId === note.id || hoveredNoteId === note.id ? 'note-lit' : ''].join(' ')}
             >
-              <span
-                className="font-mono text-[13px] shrink-0 mt-0.5 tabular-nums w-11"
-                style={{ color: phosphor }}
+              <button
+                onClick={() => {
+                  // Switch to pinned track first if it differs from active
+                  if (notesTrack.id !== activeTrackId) {
+                    setActiveTrack(notesTrack.id);
+                    setTimeout(() => seek(note.time), 0);
+                  } else {
+                    seek(note.time);
+                  }
+                }}
+                className="font-mono text-[13px] shrink-0 mt-0.5 tabular-nums w-11 text-left transition-opacity hover:opacity-100"
+                style={{ color: phosphor, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                title="Jump to this timestamp"
               >
                 {formatTime(note.time)}
-              </span>
+              </button>
 
               {editingId === note.id ? (
                 <input
@@ -253,9 +270,9 @@ export default function TimestampNotes() {
       <div className="notes-screen-input flex items-center gap-2">
         <span
           className="font-mono text-[13px] tabular-nums shrink-0 w-11"
-          style={{ color: `${phosphor}45` }}
+          style={{ color: phosphor }}
         >
-          {formatTime(currentTime)}<span style={{ opacity: 0.5 }}>›</span>
+          {formatTime(currentTime)}<span style={{ opacity: 0.6 }}>›</span>
         </span>
         <input
           value={draft}
@@ -266,8 +283,8 @@ export default function TimestampNotes() {
           }}
           placeholder={isActive ? 'note at current position…' : ''}
           disabled={!isActive}
-          className="flex-1 font-mono text-[13px] bg-transparent outline-none placeholder:opacity-20 disabled:cursor-default"
-          style={{ color: phosphor, borderBottom: `1px solid ${phosphor}25`, paddingBottom: '2px', caretColor: phosphor }}
+          className="flex-1 font-mono text-[13px] bg-transparent outline-none placeholder:opacity-30 disabled:cursor-default"
+          style={{ color: phosphor, borderBottom: `1px solid ${phosphor}55`, paddingBottom: '2px', caretColor: phosphor }}
         />
         <button
           onClick={handleAdd}

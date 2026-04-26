@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #1a1714;
+  --background: #201d18;
   --foreground: #e8ddd0;
   --tape-red: #d93a2c;
-  --surface: #211e1a;
-  --surface-raised: #2e2a25;
+  --surface: #272320;
+  --surface-raised: #332f29;
   --lcd-amber: #e8a04a;
-  --border-dark: #0d0b09;
-  --border-light: #3a342e;
+  --border-dark: #100e0b;
+  --border-light: #423c35;
 }
 
 @theme inline {
@@ -41,7 +41,7 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: 9998;
-  background: radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(0, 0, 0, 0.4) 100%);
+  background: radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(0, 0, 0, 0.28) 100%);
 }
 
 /* ── Film grain overlay ──────────────────────────────────────────────────── */
@@ -86,7 +86,7 @@ body::after {
 
   /* ── 3D button (unpressed) ───────────────────────────────────────────── */
   .btn-3d {
-    background: linear-gradient(180deg, #2e2a25 0%, #1d1a16 100%);
+    background: linear-gradient(180deg, #35302a 0%, #24211c 100%);
     border: 1px solid #0d0b09;
     border-top-color: #3a342e;
     border-radius: 6px;
@@ -161,7 +161,7 @@ body::after {
 
   /* ── Hardware panel ──────────────────────────────────────────────────── */
   .hw-panel {
-    background: linear-gradient(180deg, #272219 0%, #1e1b16 100%);
+    background: linear-gradient(180deg, #2d2820 0%, #24211b 100%);
     border: 1px solid #0d0b09;
     border-top-color: #3a342e;
     border-radius: 8px;
@@ -202,7 +202,7 @@ body::after {
 
   /* ── Play button ─────────────────────────────────────────────────────── */
   .play-btn {
-    background: linear-gradient(180deg, #28261f 0%, #18160f 100%);
+    background: linear-gradient(180deg, #2f2d25 0%, #1e1c14 100%);
     border: none;
     color: #e8ddd0;
     box-shadow:
@@ -598,7 +598,7 @@ body::after {
   }
 
   .tape-tab-body {
-    background: linear-gradient(180deg, #2a2620 0%, #1d1a15 100%);
+    background: linear-gradient(180deg, #312c25 0%, #242018 100%);
     padding: 5px 10px 6px;
     display: flex;
     align-items: center;

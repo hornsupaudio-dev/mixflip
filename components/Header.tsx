@@ -15,14 +15,14 @@ export default function Header() {
             style={{ textShadow: '0 0 20px rgba(217,58,44,0.6), 0 0 7px rgba(217,58,44,0.35)' }}
           >Flip</span>
         </span>
-        <span className="text-white/25 text-[10px] font-mono uppercase tracking-[0.18em]">by HornsUP Audio</span>
+        <span className="hidden sm:block text-white/25 text-[10px] font-mono uppercase tracking-[0.18em]">by HornsUP Audio</span>
       </div>
 
       <div className="flex items-center gap-4">
         <IRLoader />
         <button
           onClick={() => setShowKeys((v) => !v)}
-          className="btn-3d"
+          className="btn-3d hidden sm:block"
         >
           {showKeys ? 'Hide keys' : 'Shortcuts'}
         </button>

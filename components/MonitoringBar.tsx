@@ -41,84 +41,87 @@ export default function MonitoringBar() {
   const simActive = speakerSim !== 'off';
 
   return (
-    <div className="hw-panel flex items-center gap-3">
-      {/* Volume */}
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-        <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Vol</span>
-        <input
-          type="range" min="0" max="1" step="0.01" value={masterVolume}
-          onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
-          className="hw-slider w-full"
-          title={`Volume: ${Math.round(masterVolume * 100)}%`}
-        />
-        <span className="text-[9px] font-mono text-white/20 tabular-nums">{Math.round(masterVolume * 100)}%</span>
-      </div>
+    <div className="hw-panel flex flex-col gap-3">
+      {/* ── Row 1: buttons ───────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={toggleVolumeMatch}
+          className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : ''].join(' ')}
+          title="LUFS volume matching"
+        >
+          Vol Match
+        </button>
 
-      <Divider />
+        <button
+          onClick={toggleMono}
+          className={['btn-3d btn-3d-led', monoEnabled ? 'btn-3d-on' : ''].join(' ')}
+          title="Mono fold"
+        >
+          Mono
+        </button>
 
-      <button
-        onClick={toggleVolumeMatch}
-        className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : ''].join(' ')}
-        title="LUFS volume matching"
-      >
-        Vol Match
-      </button>
+        <Divider />
 
-      <button
-        onClick={toggleMono}
-        className={['btn-3d btn-3d-led', monoEnabled ? 'btn-3d-on' : ''].join(' ')}
-        title="Mono fold"
-      >
-        Mono
-      </button>
+        <button
+          onClick={() => setSpeakerSim('off')}
+          className={['btn-3d btn-3d-led', speakerSim === 'off' ? 'btn-3d-on' : ''].join(' ')}
+          title="No speaker simulation"
+        >
+          Flat
+        </button>
 
-      <Divider />
-
-      {/* Speaker sims */}
-      <button
-        onClick={() => setSpeakerSim('off')}
-        className={['btn-3d btn-3d-led', speakerSim === 'off' ? 'btn-3d-on' : ''].join(' ')}
-        title="No speaker simulation"
-      >
-        Flat
-      </button>
-
-      <div className="seg-control shrink-0">
-        {SIMS.map(({ value, label }) => (
-          <button
-            key={value}
-            onClick={() => setSpeakerSim(value)}
-            className={['seg-btn', speakerSim === value ? 'seg-btn-on' : ''].join(' ')}
-          >
-            {label}
-            {customIRs.includes(value) && (
-              <span
-                className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full shrink-0"
-                style={{ background: '#e8a04a', boxShadow: '0 0 5px rgba(232,160,74,0.7)' }}
-                title="Custom IR loaded"
-              />
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Wet/dry */}
-      <div
-        className="flex-1 min-w-0 flex flex-col gap-0.5 transition-opacity duration-150"
-        style={{ opacity: simActive ? 1 : 0.28, pointerEvents: simActive ? 'auto' : 'none' }}
-      >
-        <div className="flex justify-between">
-          <span className="text-[9px] font-mono text-white/20 uppercase tracking-wider">Dry</span>
-          <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Wet</span>
+        <div className="seg-control shrink-0">
+          {SIMS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setSpeakerSim(value)}
+              className={['seg-btn', speakerSim === value ? 'seg-btn-on' : ''].join(' ')}
+            >
+              {label}
+              {customIRs.includes(value) && (
+                <span
+                  className="ml-1.5 inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: '#e8a04a', boxShadow: '0 0 5px rgba(232,160,74,0.7)' }}
+                  title="Custom IR loaded"
+                />
+              )}
+            </button>
+          ))}
         </div>
-        <div className="flex flex-col gap-0.5">
+      </div>
+
+      {/* ── Row 2: sliders ───────────────────────────────────────────────── */}
+      <div className="flex items-end gap-4">
+        {/* Volume */}
+        <div className="flex-1 min-w-0 flex flex-col gap-1">
+          <div className="flex justify-between">
+            <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Vol</span>
+            <span className="text-[9px] font-mono text-white/20 tabular-nums">{Math.round(masterVolume * 100)}%</span>
+          </div>
+          <input
+            type="range" min="0" max="1" step="0.01" value={masterVolume}
+            onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
+            className="hw-slider w-full"
+            title={`Volume: ${Math.round(masterVolume * 100)}%`}
+          />
+        </div>
+
+        {/* Wet/dry */}
+        <div
+          className="flex-1 min-w-0 flex flex-col gap-1 transition-opacity duration-150"
+          style={{ opacity: simActive ? 1 : 0.28, pointerEvents: simActive ? 'auto' : 'none' }}
+        >
+          <div className="flex justify-between">
+            <span className="text-[9px] font-mono text-white/20 uppercase tracking-wider">Dry</span>
+            <span className="text-[9px] font-mono text-white/20 tabular-nums">{Math.round(simWetDry * 100)}%</span>
+            <span className="text-[9px] font-mono text-white/30 uppercase tracking-wider">Wet</span>
+          </div>
           <input
             type="range" min="0" max="1" step="0.01" value={simWetDry}
             onChange={(e) => setSimWetDry(parseFloat(e.target.value))}
             className="hw-slider w-full"
             title={`Wet: ${Math.round(simWetDry * 100)}%`}
           />
-          <span className="text-[9px] font-mono text-white/20 tabular-nums">{Math.round(simWetDry * 100)}%</span>
         </div>
       </div>
     </div>

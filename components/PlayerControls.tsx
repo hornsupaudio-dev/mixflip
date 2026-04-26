@@ -156,7 +156,7 @@ export default function PlayerControls() {
             />
           </div>
 
-          <span className="font-mono text-[11px] text-white/20 tabular-nums shrink-0">{formatTime(duration)}</span>
+          <span className="hidden sm:block font-mono text-[11px] text-white/20 tabular-nums shrink-0">{formatTime(duration)}</span>
         </div>
 
         {/* Scrub bar — red behind glass */}

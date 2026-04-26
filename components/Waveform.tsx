@@ -14,6 +14,8 @@ export default function Waveform() {
   const fgCanvasRef = useRef<HTMLCanvasElement>(null);
   const dimsRef = useRef({ width: 0, height: 0, dpr: 1 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Increments on every resize so canvas effects re-run after dimensions settle
+  const [dimsKey, setDimsKey] = useState(0);
 
   const { tracks, activeTrackId, isPlaying, seek, addTracks, setHoveredNoteId } = useMixFlipStore(useShallow((s) => ({
     tracks: s.tracks,
@@ -50,6 +52,7 @@ export default function Waveform() {
       bg.width = width * dpr;
       bg.height = height * dpr;
       dimsRef.current = { width, height, dpr };
+      setDimsKey((k) => k + 1); // trigger dependent effects
     });
 
     ro.observe(fg);
@@ -72,14 +75,14 @@ export default function Waveform() {
     ctx.scale(dpr, dpr);
 
     const barWidth = width / waveformData.length;
+    ctx.fillStyle = activeTrack.color + '55'; // ~33% opacity — visible even before playback
     for (let i = 0; i < waveformData.length; i++) {
       const h = waveformData[i] * height * 0.85;
-      ctx.fillStyle = activeTrack.color + '33';
       ctx.fillRect(i * barWidth, (height - h) / 2, Math.max(1, barWidth - 0.5), h);
     }
 
     ctx.restore();
-  }, [activeTrackId, activeTrack?.color, activeTrack?.isLoading]);
+  }, [dimsKey, activeTrackId, activeTrack?.color, activeTrack?.isLoading]);
 
   // ── Foreground layer ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -100,9 +103,9 @@ export default function Waveform() {
     const barWidth = width / waveformData.length;
     const playedBars = Math.floor(fraction * waveformData.length);
 
+    ctx.fillStyle = activeTrack.color;
     for (let i = 0; i < playedBars; i++) {
       const h = waveformData[i] * height * 0.85;
-      ctx.fillStyle = activeTrack.color;
       ctx.fillRect(i * barWidth, (height - h) / 2, Math.max(1, barWidth - 0.5), h);
     }
 
@@ -124,7 +127,7 @@ export default function Waveform() {
     }
 
     ctx.restore();
-  }, [currentTime, activeTrackId, activeTrack?.duration, activeTrack?.color, activeTrack?.notes]);
+  }, [dimsKey, currentTime, activeTrackId, activeTrack?.duration, activeTrack?.color, activeTrack?.notes]);
 
   const getTimeFromPointer = useCallback((clientX: number): number => {
     const canvas = fgCanvasRef.current;

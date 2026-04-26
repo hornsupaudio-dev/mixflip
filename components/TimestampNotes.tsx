@@ -264,50 +264,66 @@ export default function TimestampNotes() {
           </div>
         </div>
 
-        {/* ── Right sidebar: PIN / TXT / EMAIL always visible ───────────── */}
-        <div className="flex flex-col gap-1.5 shrink-0 justify-end pb-px">
-          {/* PIN — lit when active+pinned, dim when unavailable */}
+        {/* ── Right sidebar: icon buttons ────────────────────────────────── */}
+        <div className="flex flex-col gap-2 shrink-0 justify-end pb-0.5">
+          {/* PIN */}
           <button
             onClick={isActive ? handleTogglePin : undefined}
             title={isPinned ? 'Unpin — notes follow active track' : 'Pin notes to this track'}
-            className="terminal-btn transition-all duration-150"
+            className="w-6 h-6 flex items-center justify-center transition-all duration-150"
             style={{
               color: phosphor,
-              ...((!isActive) && { opacity: 0.12, pointerEvents: 'none' }),
-              ...(isActive && isPinned && {
-                opacity: 1,
-                boxShadow: `0 0 6px ${phosphor}55, inset 0 0 0 1px ${phosphor}55`,
-                textShadow: `0 0 8px ${phosphor}`,
-              }),
+              opacity: !isActive ? 0.12 : isPinned ? 1 : 0.4,
+              pointerEvents: !isActive ? 'none' : 'auto',
+              filter: isPinned && isActive ? `drop-shadow(0 0 4px ${phosphor})` : 'none',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
             }}
           >
-            {isPinned ? 'PIN·D' : 'PIN'}
+            {/* Thumbtack icon */}
+            <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+              <circle cx="6" cy="4.5" r="2.8" fill="currentColor" fillOpacity={isPinned ? 0.35 : 0.15} stroke="currentColor" strokeWidth="1.1"/>
+              <line x1="6" y1="7.3" x2="6" y2="12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <line x1="3.2" y1="7.5" x2="8.8" y2="7.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
+            </svg>
           </button>
 
-          {/* TXT — only interactive when there are notes */}
+          {/* TXT / Download */}
           <button
             onClick={isActive && hasNotes ? handleExport : undefined}
-            className="terminal-btn"
-            title="Download .txt"
+            title="Download notes as .txt"
+            className="w-6 h-6 flex items-center justify-center transition-opacity duration-150 hover:opacity-100"
             style={{
               color: phosphor,
-              ...(!isActive || !hasNotes ? { opacity: 0.12, pointerEvents: 'none' } : {}),
+              opacity: !isActive || !hasNotes ? 0.12 : 0.55,
+              pointerEvents: !isActive || !hasNotes ? 'none' : 'auto',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
             }}
           >
-            TXT
+            {/* Download arrow icon */}
+            <svg width="12" height="13" viewBox="0 0 12 13" fill="none">
+              <path d="M6 1V8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              <path d="M3 6L6 9L9 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="1" y1="12" x2="11" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
           </button>
 
-          {/* EMAIL — only interactive when there are notes */}
+          {/* EMAIL */}
           <button
             onClick={isActive && hasNotes ? handleEmailExport : undefined}
-            className="terminal-btn"
-            title="Share via email"
+            title="Share notes via email"
+            className="w-6 h-6 flex items-center justify-center transition-opacity duration-150 hover:opacity-100"
             style={{
               color: phosphor,
-              ...(!isActive || !hasNotes ? { opacity: 0.12, pointerEvents: 'none' } : {}),
+              opacity: !isActive || !hasNotes ? 0.12 : 0.55,
+              pointerEvents: !isActive || !hasNotes ? 'none' : 'auto',
+              background: 'none', border: 'none', cursor: 'pointer', padding: 0,
             }}
           >
-            EMAIL
+            {/* Envelope icon */}
+            <svg width="13" height="10" viewBox="0 0 13 10" fill="none">
+              <rect x="0.6" y="0.6" width="11.8" height="8.8" rx="1.2" stroke="currentColor" strokeWidth="1.1"/>
+              <path d="M1 1.5L6.5 5.5L12 1.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </button>
         </div>
 

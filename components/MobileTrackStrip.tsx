@@ -10,8 +10,8 @@ function isAudioFile(f: File) { return f.type.startsWith('audio/') || ACCEPTED_E
 const TOTAL_SLOTS = 6;
 
 function readStoredMixSlots(): number {
-  try { return Math.max(1, Math.min(5, parseInt(localStorage.getItem('mf-mix-slots') ?? '5'))); }
-  catch { return 5; }
+  try { return Math.max(1, Math.min(5, parseInt(localStorage.getItem('mf-mix-slots') ?? '4'))); }
+  catch { return 4; }
 }
 
 function saveStoredMixSlots(n: number) {

@@ -174,19 +174,47 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
         <div className="flex items-center gap-2">
           <span className="lcd shrink-0">{formatTime(displayTime)}</span>
 
-          {/* Mobile wordmark — fills the space where LED sits on desktop */}
-          <div className="sm:hidden flex-1 flex items-center justify-end select-none">
-            <span
-              className="font-bold text-lg tracking-tight"
-              style={{ fontFamily: 'var(--font-display)', color: 'rgba(232,221,208,0.35)' }}
+          {/* Mobile: logo centred, mini Mix/Ref split-circle on right */}
+          <div className="sm:hidden flex-1 flex items-center">
+            {/* Left spacer — mirrors the 40px split-circle to keep logo centred */}
+            <div style={{ width: 40 }} />
+
+            {/* Logo */}
+            <div className="flex-1 flex items-center justify-center select-none">
+              <span
+                className="font-bold text-lg tracking-tight"
+                style={{ fontFamily: 'var(--font-display)', color: 'rgba(232,221,208,0.35)' }}
+              >
+                Mix<span
+                  style={{
+                    color: '#d93a2c',
+                    textShadow: '0 0 14px rgba(217,58,44,0.5), 0 0 5px rgba(217,58,44,0.3)',
+                  }}
+                >Flip</span>
+              </span>
+            </div>
+
+            {/* Mini split-circle — same logic as desktop version */}
+            <div
+              className="split-circle"
+              style={{
+                width: 40, height: 40,
+                opacity: hasBothGroups ? 1 : 0.22,
+              }}
             >
-              Mix<span
-                style={{
-                  color: '#d93a2c',
-                  textShadow: '0 0 14px rgba(217,58,44,0.5), 0 0 5px rgba(217,58,44,0.3)',
-                }}
-              >Flip</span>
-            </span>
+              <button
+                onClick={hasBothGroups ? switchGroup : triggerRefPulse}
+                className={['split-circle-btn', activeGroup === 'reference' && hasBothGroups ? 'split-circle-btn-on' : ''].join(' ')}
+                style={{ fontSize: 8 }}
+                title="Reference group"
+              >Ref</button>
+              <button
+                onClick={hasBothGroups ? switchGroup : triggerRefPulse}
+                className={['split-circle-btn', activeGroup === 'mix' && hasBothGroups ? 'split-circle-btn-on' : ''].join(' ')}
+                style={{ fontSize: 8 }}
+                title="Mix group"
+              >Mix</button>
+            </div>
           </div>
 
           {/* LED dot-matrix display — desktop only; mobile uses NowPlayingStrip */}

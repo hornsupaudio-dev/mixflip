@@ -59,6 +59,8 @@ interface MixFlipState {
   pinnedNotesTrackId: string | null;
   /** Fires to pulse the +Ref button — triggered by clicking the split circle with no refs loaded */
   refPulsing: boolean;
+  /** Fires briefly after each import to draw attention to the VolMatch button */
+  volMatchPulsing: boolean;
 
   addTracks: (files: File[], type?: TrackType) => void;
   removeTrack: (id: string) => void;
@@ -80,6 +82,7 @@ interface MixFlipState {
   addCustomIR: (sim: string) => void;
   setHoveredNoteId: (id: string | null) => void;
   triggerRefPulse: () => void;
+  triggerVolMatchPulse: () => void;
   setPinnedNotesTrackId: (id: string | null) => void;
 
   play: () => void;
@@ -108,11 +111,12 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
     monoEnabled: false,
     speakerSim: 'off' as SpeakerSim,
     simWetDry: 1,
-    volumeMatchEnabled: true,
+    volumeMatchEnabled: false,
     masterVolume: 1,
     customIRs: [],
     hoveredNoteId: null,
     refPulsing: false,
+    volMatchPulsing: false,
     pinnedNotesTrackId: null,
 
     // ── Track management ──────────────────────────────────────────────────────
@@ -146,6 +150,9 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
         activeGroup: s.activeTrackId ? s.activeGroup : (newTracks[0] ? type : s.activeGroup),
         colorCursor: type === 'mix' ? s.colorCursor + files.length : s.colorCursor,
       }));
+
+      // Flash the VolMatch button on every import as a hint
+      get().triggerVolMatchPulse();
 
       newTracks.forEach((track, i) => {
         audioEngine.decodeFile(files[i]).then((buffer) => {
@@ -356,6 +363,11 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
       set({ refPulsing: true });
       // 3 pulses × 1.1 s each + small buffer
       setTimeout(() => set({ refPulsing: false }), 3600);
+    },
+
+    triggerVolMatchPulse: () => {
+      set({ volMatchPulsing: true });
+      setTimeout(() => set({ volMatchPulsing: false }), 2400);
     },
 
     cycleTrack: () => {

@@ -26,13 +26,14 @@ export default function MonitoringBar() {
   const [wetDryOpen, setWetDryOpen] = useState(false);
 
   const {
-    monoEnabled, speakerSim, simWetDry, volumeMatchEnabled, masterVolume, customIRs,
+    monoEnabled, speakerSim, simWetDry, volumeMatchEnabled, volMatchPulsing, masterVolume, customIRs,
     toggleMono, setSpeakerSim, setSimWetDry, toggleVolumeMatch, setMasterVolume,
   } = useMixFlipStore(useShallow((s) => ({
     monoEnabled: s.monoEnabled,
     speakerSim: s.speakerSim,
     simWetDry: s.simWetDry,
     volumeMatchEnabled: s.volumeMatchEnabled,
+    volMatchPulsing: s.volMatchPulsing,
     masterVolume: s.masterVolume,
     customIRs: s.customIRs,
     toggleMono: s.toggleMono,
@@ -61,7 +62,7 @@ export default function MonitoringBar() {
         <div className="flex items-center gap-2">
           <button
             onClick={toggleVolumeMatch}
-            className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : ''].join(' ')}
+            className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : '', volMatchPulsing && !volumeMatchEnabled ? 'btn-volmatch-pulse' : ''].join(' ')}
             title="LUFS volume matching"
           >
             <span className="text-[9px]">VolMatch</span>
@@ -164,7 +165,7 @@ export default function MonitoringBar() {
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={toggleVolumeMatch}
-            className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : ''].join(' ')}
+            className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : '', volMatchPulsing && !volumeMatchEnabled ? 'btn-volmatch-pulse' : ''].join(' ')}
             title="LUFS volume matching"
           >
             Vol Match

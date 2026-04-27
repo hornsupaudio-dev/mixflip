@@ -111,7 +111,7 @@ export default function MobileTrackStrip() {
             {isLoading ? (
               <span className="font-mono text-[9px] tracking-widest animate-pulse opacity-50">···</span>
             ) : (
-              <span className="font-mono text-[10px] tracking-wider">V{i + 1}</span>
+              <span className="font-mono text-[10px] tracking-wider">M{i + 1}</span>
             )}
           </button>
         );

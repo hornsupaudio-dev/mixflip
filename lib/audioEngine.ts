@@ -10,6 +10,12 @@ function dbToLinear(db: number): number {
 type TimeListener = (t: number) => void;
 export type SpeakerSim = 'off' | 'car' | 'room' | 'arena';
 
+export interface EQBandParams {
+  freq: number;
+  gain: number; // dB, -12 to +12
+  q: number;    // 0.3 to 8 (relevant for peaking bands)
+}
+
 class AudioEngine {
   private _ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -30,6 +36,8 @@ class AudioEngine {
 
   // ── Processing graph (built once, persists) ─────────────────────────────────
   private insertBus: GainNode | null = null;
+  // ── 4-band parametric EQ (sits between insertBus and mono stage) ────────────
+  private _eqBands: BiquadFilterNode[] = [];
   private monoBypassGain: GainNode | null = null;
   private monoWetGain: GainNode | null = null;
   private postMono: GainNode | null = null;
@@ -95,6 +103,23 @@ class AudioEngine {
     // ── insertBus: entry point for all per-play gainNodes ───────────────────
     this.insertBus = ctx.createGain();
 
+    // ── 4-band parametric EQ: lowshelf → peaking × 2 → highshelf ────────────
+    const eqTypes: BiquadFilterType[] = ['lowshelf', 'peaking', 'peaking', 'highshelf'];
+    const eqFreqs  = [100, 350, 3500, 10000];
+    const eqQs     = [0.7071, 1.0, 1.0, 0.7071];
+    this._eqBands = eqTypes.map((type, i) => {
+      const node = ctx.createBiquadFilter();
+      node.type = type;
+      node.frequency.value = eqFreqs[i];
+      node.gain.value = 0; // neutral — 0 dB is transparent for all types
+      node.Q.value = eqQs[i];
+      return node;
+    });
+    // Series chain: insertBus → eq0 → eq1 → eq2 → eq3 (then continues to mono)
+    this.insertBus.connect(this._eqBands[0]);
+    for (let i = 0; i < 3; i++) this._eqBands[i].connect(this._eqBands[i + 1]);
+    // eq3 output → mono stage (replaces old insertBus direct connects below)
+
     // ── Mono fold (stereo bypass ↔ L+R sum) ─────────────────────────────────
     this.monoBypassGain = ctx.createGain();
     this.monoBypassGain.gain.value = 1;
@@ -115,8 +140,9 @@ class AudioEngine {
 
     this.postMono = ctx.createGain();
 
-    this.insertBus.connect(this.monoBypassGain);
-    this.insertBus.connect(monoDownmix);
+    // EQ chain output → mono fold
+    this._eqBands[3].connect(this.monoBypassGain);
+    this._eqBands[3].connect(monoDownmix);
     this.monoBypassGain.connect(this.postMono);
     this.monoWetGain.connect(this.postMono);
 
@@ -251,6 +277,24 @@ class AudioEngine {
     const now = this._ctx.currentTime;
     this.currentGainNode.gain.cancelScheduledValues(now);
     this.currentGainNode.gain.setTargetAtTime(dbToLinear(gainDb), now, 0.01);
+  }
+
+  // Apply 4-band EQ settings to the persistent filter nodes.
+  // enabled=false zeros all gains (transparent pass-through) without disconnecting.
+  setEQ(bands: EQBandParams[], enabled: boolean) {
+    if (this._eqBands.length === 0) return; // graph not yet built
+    const now = this._ctx?.currentTime ?? 0;
+    const TC = 0.015; // 15 ms ramp — instant but click-free
+    this._eqBands.forEach((node, i) => {
+      const band = bands[i];
+      if (!band) return;
+      node.frequency.setTargetAtTime(band.freq, now, TC);
+      node.gain.setTargetAtTime(enabled ? band.gain : 0, now, TC);
+      // Q only matters for peaking; shelves use their built-in slope
+      if (node.type === 'peaking') {
+        node.Q.setTargetAtTime(Math.max(0.1, band.q), now, TC);
+      }
+    });
   }
 
   // ── Public time subscription (useSyncExternalStore compatible) ─────────────

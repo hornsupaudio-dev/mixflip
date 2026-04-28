@@ -1,12 +1,27 @@
 'use client';
 
 import { create } from 'zustand';
-import { audioEngine, SpeakerSim } from '@/lib/audioEngine';
+import { audioEngine, SpeakerSim, EQBandParams } from '@/lib/audioEngine';
 import { getBuffer, setBuffer, setWaveform, deleteBuffer } from '@/lib/audioStore';
 import { extractWaveform } from '@/lib/waveformData';
 import { computeGainDb } from '@/lib/lufsNorm';
 
 export type TrackType = 'mix' | 'reference';
+
+export interface TrackEQ {
+  enabled: boolean;
+  bands: [EQBandParams, EQBandParams, EQBandParams, EQBandParams];
+}
+
+export const DEFAULT_EQ: TrackEQ = {
+  enabled: false,
+  bands: [
+    { freq: 100,   gain: 0, q: 0.7071 }, // lo shelf
+    { freq: 350,   gain: 0, q: 1.0    }, // lo mid
+    { freq: 3500,  gain: 0, q: 1.0    }, // hi mid
+    { freq: 10000, gain: 0, q: 0.7071 }, // hi shelf
+  ],
+};
 
 export interface TimestampNote {
   id: string;
@@ -27,6 +42,7 @@ export interface Track {
   fileSize: number;
   sampleRate: number;
   numberOfChannels: number;
+  eq: TrackEQ;
 }
 
 const MIX_COLORS = ['#3b82f6', '#a855f7', '#22c55e', '#f59e0b', '#ec4899'];
@@ -72,6 +88,10 @@ interface MixFlipState {
   addNote: (trackId: string, text: string, time: number) => void;
   removeNote: (trackId: string, noteId: string) => void;
   updateNote: (trackId: string, noteId: string, text: string) => void;
+
+  setTrackEQ: (trackId: string, bandIndex: number, params: Partial<EQBandParams>) => void;
+  toggleTrackEQ: (trackId: string) => void;
+  resetTrackEQ: (trackId: string) => void;
 
   masterVolume: number;
   toggleMono: () => void;
@@ -141,6 +161,7 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
           fileSize: file.size,
           sampleRate: 0,
           numberOfChannels: 0,
+          eq: { ...DEFAULT_EQ, bands: DEFAULT_EQ.bands.map((b) => ({ ...b })) as TrackEQ['bands'] },
         };
       });
 
@@ -199,6 +220,9 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
       const lastActiveUpdate = newTrack.type === 'mix'
         ? { lastActiveMixId: id }
         : { lastActiveRefId: id };
+
+      // Apply EQ for the incoming track before any playback change
+      audioEngine.setEQ(newTrack.eq.bands, newTrack.eq.enabled);
 
       if (switchingGroup) {
         const currentPos = audioEngine.getPosition();
@@ -297,6 +321,8 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
       if (!buffer) return;
       const startPos = activeGroup === 'mix' ? savedMixTime : savedRefTime;
       const effectiveGain = volumeMatchEnabled ? track.gainDb : 0;
+      // Ensure EQ is applied (handles first play when AudioContext was just created)
+      audioEngine.setEQ(track.eq.bands, track.eq.enabled);
       audioEngine.play(buffer, effectiveGain, startPos);
       set({ isPlaying: true });
     },
@@ -358,6 +384,54 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
 
     setHoveredNoteId: (id) => set({ hoveredNoteId: id }),
     setPinnedNotesTrackId: (id) => set({ pinnedNotesTrackId: id }),
+
+    setTrackEQ: (trackId, bandIndex, params) => {
+      set((s) => ({
+        tracks: s.tracks.map((t) =>
+          t.id === trackId
+            ? {
+                ...t,
+                eq: {
+                  ...t.eq,
+                  bands: t.eq.bands.map((b, i) =>
+                    i === bandIndex ? { ...b, ...params } : b,
+                  ) as TrackEQ['bands'],
+                },
+              }
+            : t,
+        ),
+      }));
+      const { activeTrackId, tracks } = get();
+      if (activeTrackId === trackId) {
+        const track = tracks.find((t) => t.id === trackId);
+        if (track) audioEngine.setEQ(track.eq.bands, track.eq.enabled);
+      }
+    },
+
+    toggleTrackEQ: (trackId) => {
+      set((s) => ({
+        tracks: s.tracks.map((t) =>
+          t.id === trackId ? { ...t, eq: { ...t.eq, enabled: !t.eq.enabled } } : t,
+        ),
+      }));
+      const { activeTrackId, tracks } = get();
+      if (activeTrackId === trackId) {
+        const track = tracks.find((t) => t.id === trackId);
+        if (track) audioEngine.setEQ(track.eq.bands, track.eq.enabled);
+      }
+    },
+
+    resetTrackEQ: (trackId) => {
+      const fresh: TrackEQ = {
+        ...DEFAULT_EQ,
+        bands: DEFAULT_EQ.bands.map((b) => ({ ...b })) as TrackEQ['bands'],
+      };
+      set((s) => ({
+        tracks: s.tracks.map((t) => (t.id === trackId ? { ...t, eq: fresh } : t)),
+      }));
+      const { activeTrackId } = get();
+      if (activeTrackId === trackId) audioEngine.setEQ(fresh.bands, fresh.enabled);
+    },
 
     triggerRefPulse: () => {
       set({ refPulsing: true });

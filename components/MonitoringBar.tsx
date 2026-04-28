@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMixFlipStore } from '@/store/mixflipStore';
 import type { SpeakerSim } from '@/lib/audioEngine';
+import EQPanel from '@/components/EQPanel';
 
 const SIMS: { value: Exclude<SpeakerSim, 'off'>; label: string }[] = [
   { value: 'car', label: 'Car' },
@@ -24,6 +25,7 @@ function Divider() {
 
 export default function MonitoringBar() {
   const [wetDryOpen, setWetDryOpen] = useState(false);
+  const [eqOpen, setEqOpen] = useState(false);
 
   const {
     monoEnabled, speakerSim, simWetDry, volumeMatchEnabled, volMatchPulsing, masterVolume, customIRs,
@@ -122,6 +124,17 @@ export default function MonitoringBar() {
               <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
+
+          <Divider />
+
+          {/* EQ toggle */}
+          <button
+            onClick={() => setEqOpen((v) => !v)}
+            className={['btn-3d btn-3d-led', eqOpen ? 'btn-3d-on' : ''].join(' ')}
+            title={eqOpen ? 'Close EQ' : 'Open EQ'}
+          >
+            <span className="text-[9px]">EQ</span>
+          </button>
         </div>
 
         {/* Row 2: Vol/Trim slider */}
@@ -155,6 +168,13 @@ export default function MonitoringBar() {
               className="hw-slider w-full"
               title={`Wet: ${Math.round(simWetDry * 100)}%`}
             />
+          </div>
+        )}
+
+        {/* EQ panel — revealed via EQ button */}
+        {eqOpen && (
+          <div className="border-t border-white/5 pt-2">
+            <EQPanel />
           </div>
         )}
       </div>
@@ -207,7 +227,24 @@ export default function MonitoringBar() {
               </button>
             ))}
           </div>
+
+          <Divider />
+
+          <button
+            onClick={() => setEqOpen((v) => !v)}
+            className={['btn-3d btn-3d-led', eqOpen ? 'btn-3d-on' : ''].join(' ')}
+            title={eqOpen ? 'Close EQ' : 'Open parametric EQ'}
+          >
+            EQ
+          </button>
         </div>
+
+        {/* EQ panel — revealed via EQ button */}
+        {eqOpen && (
+          <div className="border-t border-white/5 pt-1">
+            <EQPanel />
+          </div>
+        )}
 
         {/* Row 2: sliders */}
         <div className="flex items-end gap-4">

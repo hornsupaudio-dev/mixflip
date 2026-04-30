@@ -29,21 +29,27 @@ export default function MonitoringBar() {
 
   const {
     monoEnabled, speakerSim, simWetDry, volumeMatchEnabled, volMatchPulsing, masterVolume, customIRs,
+    hasActiveTrack, eqEngaged,
     toggleMono, setSpeakerSim, setSimWetDry, toggleVolumeMatch, setMasterVolume,
-  } = useMixFlipStore(useShallow((s) => ({
-    monoEnabled: s.monoEnabled,
-    speakerSim: s.speakerSim,
-    simWetDry: s.simWetDry,
-    volumeMatchEnabled: s.volumeMatchEnabled,
-    volMatchPulsing: s.volMatchPulsing,
-    masterVolume: s.masterVolume,
-    customIRs: s.customIRs,
-    toggleMono: s.toggleMono,
-    setSpeakerSim: s.setSpeakerSim,
-    setSimWetDry: s.setSimWetDry,
-    toggleVolumeMatch: s.toggleVolumeMatch,
-    setMasterVolume: s.setMasterVolume,
-  })));
+  } = useMixFlipStore(useShallow((s) => {
+    const active = s.tracks.find((t) => t.id === s.activeTrackId);
+    return {
+      monoEnabled: s.monoEnabled,
+      speakerSim: s.speakerSim,
+      simWetDry: s.simWetDry,
+      volumeMatchEnabled: s.volumeMatchEnabled,
+      volMatchPulsing: s.volMatchPulsing,
+      masterVolume: s.masterVolume,
+      customIRs: s.customIRs,
+      hasActiveTrack: !!active,
+      eqEngaged: !!active?.eq.enabled,
+      toggleMono: s.toggleMono,
+      setSpeakerSim: s.setSpeakerSim,
+      setSimWetDry: s.setSimWetDry,
+      toggleVolumeMatch: s.toggleVolumeMatch,
+      setMasterVolume: s.setMasterVolume,
+    };
+  }));
 
   const simActive = speakerSim !== 'off';
   const simIdx = SIM_CYCLE.indexOf(speakerSim);
@@ -65,15 +71,19 @@ export default function MonitoringBar() {
           <button
             onClick={toggleVolumeMatch}
             className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : '', volMatchPulsing && !volumeMatchEnabled ? 'btn-volmatch-pulse' : ''].join(' ')}
-            title="LUFS volume matching"
+            title="LUFS volume matching — match every track to the same loudness"
+            aria-label="LUFS volume matching"
+            aria-pressed={volumeMatchEnabled}
           >
-            <span className="text-[9px]">VolMatch</span>
+            <span className="text-[9px]">Vol Match</span>
           </button>
 
           <button
             onClick={toggleMono}
             className={['btn-3d btn-3d-led', monoEnabled ? 'btn-3d-on' : ''].join(' ')}
-            title="Mono fold"
+            title="Mono fold — collapse stereo to mono to check phase"
+            aria-label="Mono fold"
+            aria-pressed={monoEnabled}
           >
             Mono
           </button>
@@ -127,11 +137,15 @@ export default function MonitoringBar() {
 
           <Divider />
 
-          {/* EQ toggle */}
+          {/* EQ toggle — also lights when EQ is engaged on the active track */}
           <button
             onClick={() => setEqOpen((v) => !v)}
-            className={['btn-3d btn-3d-led', eqOpen ? 'btn-3d-on' : ''].join(' ')}
-            title={eqOpen ? 'Close EQ' : 'Open EQ'}
+            disabled={!hasActiveTrack}
+            className={['btn-3d btn-3d-led', eqOpen || eqEngaged ? 'btn-3d-on' : ''].join(' ')}
+            style={{ opacity: hasActiveTrack ? 1 : 0.35 }}
+            title={!hasActiveTrack ? 'Load a track to use EQ' : eqOpen ? 'Close EQ' : 'Open EQ'}
+            aria-label="Toggle EQ panel"
+            aria-expanded={eqOpen}
           >
             <span className="text-[9px]">EQ</span>
           </button>
@@ -232,8 +246,12 @@ export default function MonitoringBar() {
 
           <button
             onClick={() => setEqOpen((v) => !v)}
-            className={['btn-3d btn-3d-led', eqOpen ? 'btn-3d-on' : ''].join(' ')}
-            title={eqOpen ? 'Close EQ' : 'Open parametric EQ'}
+            disabled={!hasActiveTrack}
+            className={['btn-3d btn-3d-led', eqOpen || eqEngaged ? 'btn-3d-on' : ''].join(' ')}
+            style={{ opacity: hasActiveTrack ? 1 : 0.35 }}
+            title={!hasActiveTrack ? 'Load a track to use EQ' : eqOpen ? 'Close EQ' : 'Open parametric EQ'}
+            aria-label="Toggle EQ panel"
+            aria-expanded={eqOpen}
           >
             EQ
           </button>

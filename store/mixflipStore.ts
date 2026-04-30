@@ -321,9 +321,10 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
       if (!buffer) return;
       const startPos = activeGroup === 'mix' ? savedMixTime : savedRefTime;
       const effectiveGain = volumeMatchEnabled ? track.gainDb : 0;
-      // Ensure EQ is applied (handles first play when AudioContext was just created)
-      audioEngine.setEQ(track.eq.bands, track.eq.enabled);
+      // Order matters: play() builds the audio graph if it doesn't exist yet.
+      // Apply EQ AFTER, so the filter nodes definitely exist.
       audioEngine.play(buffer, effectiveGain, startPos);
+      audioEngine.setEQ(track.eq.bands, track.eq.enabled);
       set({ isPlaying: true });
     },
 
@@ -422,15 +423,19 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
     },
 
     resetTrackEQ: (trackId) => {
-      const fresh: TrackEQ = {
-        ...DEFAULT_EQ,
-        bands: DEFAULT_EQ.bands.map((b) => ({ ...b })) as TrackEQ['bands'],
-      };
+      // Reset bands to defaults but PRESERVE the user's enabled state —
+      // hitting RESET while EQ is engaged shouldn't bypass it.
+      const freshBands = DEFAULT_EQ.bands.map((b) => ({ ...b })) as TrackEQ['bands'];
       set((s) => ({
-        tracks: s.tracks.map((t) => (t.id === trackId ? { ...t, eq: fresh } : t)),
+        tracks: s.tracks.map((t) =>
+          t.id === trackId ? { ...t, eq: { ...t.eq, bands: freshBands } } : t,
+        ),
       }));
-      const { activeTrackId } = get();
-      if (activeTrackId === trackId) audioEngine.setEQ(fresh.bands, fresh.enabled);
+      const { activeTrackId, tracks } = get();
+      if (activeTrackId === trackId) {
+        const track = tracks.find((t) => t.id === trackId);
+        if (track) audioEngine.setEQ(track.eq.bands, track.eq.enabled);
+      }
     },
 
     triggerRefPulse: () => {

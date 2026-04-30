@@ -114,7 +114,7 @@ export default function Home() {
         {/* ── Mobile sticky bottom: Player + Monitoring ───────────────────── */}
         {/* noKeyboard — keyboard is handled by the desktop PlayerControls instance */}
         <div
-          className="sm:hidden shrink-0 flex flex-col gap-3 pt-3 pb-3 border-t transition-opacity duration-300"
+          className="sm:hidden shrink-0 flex flex-col gap-3 pt-3 pb-2 border-t transition-opacity duration-300"
           style={{
             borderTopColor: '#1a1714',
             opacity: hasAny ? 1 : 0.22,
@@ -123,6 +123,14 @@ export default function Home() {
         >
           <PlayerControls noKeyboard />
           <MonitoringBar />
+
+          {/* Privacy / branding line — discreet, always visible on mobile */}
+          <p
+            className="font-mono text-[8px] tracking-[0.2em] uppercase text-center select-none"
+            style={{ color: 'rgba(232,221,208,0.18)', marginTop: -2 }}
+          >
+            files never leave your device
+          </p>
         </div>
 
       </div>

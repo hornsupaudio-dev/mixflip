@@ -1,7 +1,7 @@
 'use client';
 
 import { useShallow } from 'zustand/react/shallow';
-import { useMixFlipStore, DEFAULT_EQ } from '@/store/mixflipStore';
+import { useMixFlipStore } from '@/store/mixflipStore';
 
 // ── Band definitions ──────────────────────────────────────────────────────────
 const BANDS = [
@@ -32,7 +32,20 @@ export default function EQPanel() {
   );
 
   const track = tracks.find((t) => t.id === activeTrackId);
-  if (!track) return null;
+
+  // ── Empty state — no track loaded ──────────────────────────────────────────
+  if (!track) {
+    return (
+      <div className="flex items-center justify-center py-3">
+        <span
+          className="font-mono text-[9px] uppercase tracking-widest"
+          style={{ color: 'rgba(232,221,208,0.22)' }}
+        >
+          load a track to use the eq
+        </span>
+      </div>
+    );
+  }
 
   const eq = track.eq;
   const on = eq.enabled;
@@ -53,7 +66,8 @@ export default function EQPanel() {
           onClick={() => resetTrackEQ(track.id)}
           className="btn-3d"
           style={{ fontSize: 8, padding: '2px 7px', opacity: 0.55 }}
-          title="Reset all bands to 0"
+          title="Reset all bands to 0 dB"
+          aria-label="Reset EQ bands"
         >
           RESET
         </button>
@@ -62,6 +76,8 @@ export default function EQPanel() {
           className={['btn-3d btn-3d-led', on ? 'btn-3d-on' : ''].join(' ')}
           style={{ fontSize: 9, padding: '3px 10px' }}
           title={on ? 'Bypass EQ' : 'Enable EQ'}
+          aria-label={on ? 'Bypass EQ' : 'Enable EQ'}
+          aria-pressed={on}
         >
           {on ? 'ON' : 'OFF'}
         </button>
@@ -75,7 +91,7 @@ export default function EQPanel() {
 
           return (
             <div key={i} className="flex flex-col gap-0.5">
-              {/* Row 1: name | gain slider | gain value */}
+              {/* Row 1: name | gain slider (with 0dB tick) | gain value */}
               <div className="flex items-center gap-2">
                 <span
                   className="font-mono text-[8px] uppercase tracking-wider shrink-0"
@@ -83,15 +99,38 @@ export default function EQPanel() {
                 >
                   {def.name}
                 </span>
-                <input
-                  type="range"
-                  min="-12" max="12" step="0.5"
-                  value={band.gain}
-                  disabled={!on}
-                  onChange={(e) => setTrackEQ(track.id, i, { gain: parseFloat(e.target.value) })}
-                  className="hw-slider flex-1"
-                  style={{ cursor: on ? 'pointer' : 'default' }}
-                />
+
+                {/* Slider wrapper with 0 dB centre tick */}
+                <div className="relative flex-1 flex items-center">
+                  {/* 0 dB reference tick — sits behind the thumb */}
+                  <div
+                    aria-hidden
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: '50%',
+                      top: '50%',
+                      width: 1,
+                      height: 10,
+                      marginLeft: -0.5,
+                      marginTop: -5,
+                      background: 'rgba(232,221,208,0.18)',
+                      zIndex: 0,
+                    }}
+                  />
+                  <input
+                    type="range"
+                    min="-12" max="12" step="0.5"
+                    value={band.gain}
+                    disabled={!on}
+                    onChange={(e) => setTrackEQ(track.id, i, { gain: parseFloat(e.target.value) })}
+                    onDoubleClick={() => setTrackEQ(track.id, i, { gain: 0 })}
+                    className="hw-slider w-full relative"
+                    style={{ cursor: on ? 'pointer' : 'default', zIndex: 1 }}
+                    aria-label={`${def.name} gain in decibels`}
+                    title="Drag to adjust · double-click to reset"
+                  />
+                </div>
+
                 <span
                   className="font-mono text-[10px] tabular-nums shrink-0 text-right"
                   style={{
@@ -115,6 +154,7 @@ export default function EQPanel() {
                   }
                   className="hw-slider"
                   style={{ width: 64, cursor: on ? 'pointer' : 'default' }}
+                  aria-label={`${def.name} frequency in hertz`}
                 />
                 <span
                   className="font-mono text-[8px] tabular-nums shrink-0"
@@ -133,6 +173,7 @@ export default function EQPanel() {
                       onChange={(e) => setTrackEQ(track.id, i, { q: parseFloat(e.target.value) })}
                       className="hw-slider"
                       style={{ width: 48, cursor: on ? 'pointer' : 'default' }}
+                      aria-label={`${def.name} Q (bandwidth)`}
                     />
                     <span
                       className="font-mono text-[8px] tabular-nums shrink-0"

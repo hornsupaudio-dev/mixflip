@@ -270,6 +270,8 @@ export default function TimestampNotes() {
           <button
             onClick={isActive ? handleTogglePin : undefined}
             title={isPinned ? 'Unpin — notes follow active track' : 'Pin notes to this track'}
+            aria-label={isPinned ? 'Unpin notes' : 'Pin notes to this track'}
+            aria-pressed={isPinned}
             className="w-6 h-6 flex items-center justify-center transition-all duration-150"
             style={{
               color: phosphor,
@@ -280,7 +282,7 @@ export default function TimestampNotes() {
             }}
           >
             {/* Thumbtack icon */}
-            <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+            <svg width="12" height="14" viewBox="0 0 12 14" fill="none" aria-hidden>
               <circle cx="6" cy="4.5" r="2.8" fill="currentColor" fillOpacity={isPinned ? 0.35 : 0.15} stroke="currentColor" strokeWidth="1.1"/>
               <line x1="6" y1="7.3" x2="6" y2="12.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
               <line x1="3.2" y1="7.5" x2="8.8" y2="7.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
@@ -291,6 +293,7 @@ export default function TimestampNotes() {
           <button
             onClick={isActive && hasNotes ? handleExport : undefined}
             title="Download notes as .txt"
+            aria-label="Download notes as text file"
             className="w-6 h-6 flex items-center justify-center transition-opacity duration-150 hover:opacity-100"
             style={{
               color: phosphor,
@@ -300,7 +303,7 @@ export default function TimestampNotes() {
             }}
           >
             {/* Download arrow icon */}
-            <svg width="12" height="13" viewBox="0 0 12 13" fill="none">
+            <svg width="12" height="13" viewBox="0 0 12 13" fill="none" aria-hidden>
               <path d="M6 1V8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
               <path d="M3 6L6 9L9 6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
               <line x1="1" y1="12" x2="11" y2="12" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
@@ -311,6 +314,7 @@ export default function TimestampNotes() {
           <button
             onClick={isActive && hasNotes ? handleEmailExport : undefined}
             title="Share notes via email"
+            aria-label="Share notes via email"
             className="w-6 h-6 flex items-center justify-center transition-opacity duration-150 hover:opacity-100"
             style={{
               color: phosphor,
@@ -320,7 +324,7 @@ export default function TimestampNotes() {
             }}
           >
             {/* Envelope icon */}
-            <svg width="13" height="10" viewBox="0 0 13 10" fill="none">
+            <svg width="13" height="10" viewBox="0 0 13 10" fill="none" aria-hidden>
               <rect x="0.6" y="0.6" width="11.8" height="8.8" rx="1.2" stroke="currentColor" strokeWidth="1.1"/>
               <path d="M1 1.5L6.5 5.5L12 1.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>

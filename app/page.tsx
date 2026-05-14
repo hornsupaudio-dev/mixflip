@@ -6,6 +6,7 @@ import Header from '@/components/Header';
 import DropZone from '@/components/DropZone';
 import VersionTabs from '@/components/VersionTabs';
 import Waveform from '@/components/Waveform';
+import LevelMeter from '@/components/LevelMeter';
 import TrackInfo from '@/components/TrackInfo';
 import PlayerControls from '@/components/PlayerControls';
 import MonitoringBar from '@/components/MonitoringBar';
@@ -75,6 +76,9 @@ export default function Home() {
 
           {/* Waveform — always visible */}
           <Waveform />
+
+          {/* Stereo level meter — RMS bars + peak ticks + clip LED */}
+          <LevelMeter />
 
           {/* Desktop: TrackInfo + Player + Monitoring */}
           <div

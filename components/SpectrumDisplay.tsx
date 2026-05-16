@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useMixFlipStore } from '@/store/mixflipStore';
 import { audioEngine } from '@/lib/audioEngine';
+import { getSpectrumAvg, updateSpectrumAvg } from '@/lib/audioStore';
 
 // Spectrum dB scale (vertical axis for the audio spectrum fill)
 const SPEC_MIN_DB = -75;
@@ -14,6 +15,18 @@ const EQ_RANGE_DB = 15;
 // Log-freq display range
 const F_MIN = 20;
 const F_MAX = 20000;
+
+// Linear interpolation between adjacent FFT bins (in dB space).
+// Smooths the "stair-step" look in the bass region where a single bin
+// covers many pixels on the log-frequency axis.
+function binAt(bins: Float32Array, binF: number): number {
+  if (bins.length === 0) return -120;
+  const clamped = Math.max(0, Math.min(bins.length - 1.001, binF));
+  const b0 = Math.floor(clamped);
+  const b1 = b0 + 1;
+  const t = clamped - b0;
+  return bins[b0] * (1 - t) + bins[b1] * t;
+}
 
 export default function SpectrumDisplay() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -35,8 +48,9 @@ export default function SpectrumDisplay() {
     const recomputeEQ = () => {
       const state = useMixFlipStore.getState();
       const t = state.tracks.find((x) => x.id === state.activeTrackId);
-      if (!t || !freqs || !eqMag) {
-        if (eqMag) eqMag.fill(0); // flat curve when no track
+      if (!eqMag) return;
+      if (!t || !freqs) {
+        eqMag.fill(0);
         return;
       }
       audioEngine.getEQResponseFromParams(t.eq.bands, freqs, eqMag);
@@ -51,7 +65,6 @@ export default function SpectrumDisplay() {
       canvas.height = h;
       cw = w; ch = h;
 
-      // Per-column log-frequency lookup
       freqs = new Float32Array(w);
       eqMag = new Float32Array(w);
       for (let x = 0; x < w; x++) {
@@ -63,7 +76,7 @@ export default function SpectrumDisplay() {
     const ro = new ResizeObserver(onResize);
     ro.observe(canvas);
 
-    // Recompute the EQ curve whenever any active-track EQ param changes
+    // Recompute the EQ curve whenever the active track or its EQ bands change
     const unsubStore = useMixFlipStore.subscribe((state, prev) => {
       const t  = state.tracks.find((x) => x.id === state.activeTrackId);
       const pt = prev.tracks.find((x) => x.id === prev.activeTrackId);
@@ -95,7 +108,7 @@ export default function SpectrumDisplay() {
       ctx.moveTo(0, ch / 2);
       ctx.lineTo(cw, ch / 2);
       ctx.stroke();
-      // Vertical: 100, 1k, 10k
+      // Vertical: 100 / 1k / 10k
       [100, 1000, 10000].forEach((f) => {
         const x = freqToX(f);
         ctx.beginPath();
@@ -104,8 +117,14 @@ export default function SpectrumDisplay() {
         ctx.stroke();
       });
 
-      // ── Spectrum ───────────────────────────────────────────────────────
+      // ── Spectrum (instantaneous, with bin interpolation) ───────────────
       const bins = audioEngine.getSpectrumBins();
+
+      // Push current bins into the running average (only when actually playing)
+      if (bins && t?.id && audioEngine.isPlaying) {
+        updateSpectrumAvg(t.id, bins);
+      }
+
       if (bins) {
         const binCount = bins.length;
         const nyquist = audioEngine.sampleRate / 2;
@@ -115,35 +134,37 @@ export default function SpectrumDisplay() {
           return ch - ((db - SPEC_MIN_DB) / -SPEC_MIN_DB) * ch;
         };
 
-        // Filled area
+        // Filled area (ambient haze, low opacity)
         ctx.beginPath();
         for (let x = 0; x < cw; x++) {
-          const freq = freqs[x];
-          const binF = (freq / nyquist) * binCount;
-          const bin = Math.min(binCount - 1, Math.floor(binF));
-          const y = dbToY(bins[bin]);
+          const binF = (freqs[x] / nyquist) * binCount;
+          const y = dbToY(binAt(bins, binF));
           if (x === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
         ctx.lineTo(cw, ch);
         ctx.lineTo(0, ch);
         ctx.closePath();
-        ctx.fillStyle = `${color}28`;
+        ctx.fillStyle = `${color}22`;
         ctx.fill();
 
-        // Stroke on top
-        ctx.beginPath();
-        for (let x = 0; x < cw; x++) {
-          const freq = freqs[x];
-          const binF = (freq / nyquist) * binCount;
-          const bin = Math.min(binCount - 1, Math.floor(binF));
-          const y = dbToY(bins[bin]);
-          if (x === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
+        // Average curve — bold, opaque line in the track color (only if we've
+        // accumulated at least a handful of samples to avoid jitter at start)
+        const avg = t?.id ? getSpectrumAvg(t.id) : undefined;
+        if (avg && avg.n > 4) {
+          ctx.beginPath();
+          for (let x = 0; x < cw; x++) {
+            const binF = (freqs[x] / nyquist) * binCount;
+            const y = dbToY(binAt(avg.avg, binF));
+            if (x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
+          ctx.globalAlpha = 0.9;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
         }
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 1.4;
-        ctx.stroke();
       }
 
       // ── EQ curve overlay ───────────────────────────────────────────────
@@ -152,17 +173,16 @@ export default function SpectrumDisplay() {
       ctx.beginPath();
       for (let x = 0; x < cw; x++) {
         const eqDb = eqMag[x];
-        // Clamp to ±EQ_RANGE_DB visually
         const clamped = Math.max(-EQ_RANGE_DB, Math.min(EQ_RANGE_DB, eqDb));
         const y = midY - (clamped / EQ_RANGE_DB) * halfH;
         if (x === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
-      ctx.strokeStyle = eqEnabled ? 'rgba(255,240,220,0.82)' : 'rgba(255,240,220,0.22)';
+      ctx.strokeStyle = eqEnabled ? 'rgba(255,240,220,0.85)' : 'rgba(255,240,220,0.22)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // ── Subtle frequency labels (100 / 1k / 10k) ───────────────────────
+      // ── Frequency labels (100 / 1k / 10k) ──────────────────────────────
       ctx.fillStyle = 'rgba(255,240,220,0.16)';
       ctx.font = `${Math.max(8, Math.floor(8 * (window.devicePixelRatio || 1)))}px var(--font-mono), monospace`;
       ctx.textBaseline = 'bottom';

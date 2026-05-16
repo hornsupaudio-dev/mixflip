@@ -258,10 +258,13 @@ class AudioEngine {
     meterSplitter.connect(this.analyserL, 0);
     meterSplitter.connect(this.analyserR, 1);
 
-    // ── Spectrum analyser — mono sum at insertOut, 4096-pt FFT ──────────────
+    // ── Spectrum analyser — mono sum at insertOut, 8192-pt FFT ──────────────
     // Same tap point so the spectrum reflects what the meter measures.
+    // 8192 doubles low-end bin density vs. 4096 (~2.7 Hz/bin at 44.1k) — paired
+    // with linear interpolation in the display, the bass region reads smooth
+    // rather than stair-stepped.
     this.analyserSpectrum = ctx.createAnalyser();
-    this.analyserSpectrum.fftSize = 4096;
+    this.analyserSpectrum.fftSize = 8192;
     this.analyserSpectrum.smoothingTimeConstant = 0.85;
     this.analyserSpectrum.minDecibels = -90;
     this.analyserSpectrum.maxDecibels = 0;

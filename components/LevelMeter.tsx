@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useSyncExternalStore } from 'react';
 import { audioEngine, type MeterSnapshot } from '@/lib/audioEngine';
 import { useMixFlipStore } from '@/store/mixflipStore';
 
@@ -35,9 +35,14 @@ function fmtDb(db: number): string {
   return db.toFixed(1);
 }
 
+// Round to 3 decimals — eliminates the last-digit FP differences between
+// Node's V8 (SSR) and Chrome's V8 (client) for sin/cos that otherwise trip
+// React's strict SSR hydration check.
+const r3 = (n: number) => Math.round(n * 1000) / 1000;
+
 function polarPoint(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = angleDeg * Math.PI / 180;
-  return { x: cx + Math.sin(rad) * r, y: cy - Math.cos(rad) * r };
+  return { x: r3(cx + Math.sin(rad) * r), y: r3(cy - Math.cos(rad) * r) };
 }
 
 function arcPath(cx: number, cy: number, r: number, startDeg: number, endDeg: number): string {
@@ -255,15 +260,6 @@ export default function LevelMeter() {
   const activeColor = useMixFlipStore((s) =>
     s.tracks.find(t => t.id === s.activeTrackId)?.color ?? '#6b7280',
   );
-
-  // Defer SVG rendering until after hydration: React 19 is strict about
-  // attribute serialisation in SVG (e.g. width="100%" + numeric viewBox),
-  // and the meter shows silence on first frame anyway — no info lost.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) {
-    return <div className="shrink-0" style={{ height: 36 }} aria-hidden />;
-  }
 
   const peakMax = Math.max(m.holdL, m.holdR);
   const hot = peakMax > -0.1;

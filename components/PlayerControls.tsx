@@ -220,7 +220,7 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
           {/* LED dot-matrix display — desktop only; mobile uses NowPlayingStrip */}
           <div className="hidden sm:block pipboy-screen flex-1 overflow-hidden relative self-stretch">
             <LEDDisplay
-              label={activeTrack?.label ?? ''}
+              label={activeTrack?.label ?? 'Load your tracks'}
               color={activeTrack?.color ?? 'rgba(255,255,255,0.15)'}
               isPlaying={isPlaying}
               activeTrackId={activeTrackId}

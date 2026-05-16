@@ -29,7 +29,11 @@ export default function NowPlayingStrip() {
   })));
 
   const ready = activeTrack && !activeTrack.isLoading && activeTrack.sampleRate > 0;
-  const label = ready ? buildLabel(activeTrack) : (activeTrack?.label ?? '');
+  // Show a friendly prompt when nothing is loaded, instead of leaving the
+  // display blank / greyed.
+  const label = ready
+    ? buildLabel(activeTrack)
+    : activeTrack?.label ?? 'Load your tracks';
 
   return (
     <div className="pipboy-screen relative h-9 overflow-hidden">

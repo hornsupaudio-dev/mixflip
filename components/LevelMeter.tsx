@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { audioEngine, type MeterSnapshot } from '@/lib/audioEngine';
 import { useMixFlipStore } from '@/store/mixflipStore';
 
@@ -255,6 +255,15 @@ export default function LevelMeter() {
   const activeColor = useMixFlipStore((s) =>
     s.tracks.find(t => t.id === s.activeTrackId)?.color ?? '#6b7280',
   );
+
+  // Defer SVG rendering until after hydration: React 19 is strict about
+  // attribute serialisation in SVG (e.g. width="100%" + numeric viewBox),
+  // and the meter shows silence on first frame anyway — no info lost.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) {
+    return <div className="shrink-0" style={{ height: 36 }} aria-hidden />;
+  }
 
   const peakMax = Math.max(m.holdL, m.holdR);
   const hot = peakMax > -0.1;

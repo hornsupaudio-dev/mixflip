@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMixFlipStore } from '@/store/mixflipStore';
 import type { SpeakerSim } from '@/lib/audioEngine';
@@ -59,6 +59,12 @@ export default function MonitoringBar() {
     const next = SIM_CYCLE[(simIdx + 1) % SIM_CYCLE.length];
     setSpeakerSim(next);
   };
+
+  // When sim is turned off, collapse the wet/dry slider too (the toggle
+  // chevron is hidden in that state, so we'd lose the only way to close it).
+  useEffect(() => {
+    if (!simActive) setWetDryOpen(false);
+  }, [simActive]);
 
   return (
     <div className="hw-panel flex flex-col gap-3">
@@ -120,20 +126,23 @@ export default function MonitoringBar() {
             )}
           </button>
 
-          {/* Wet/dry chevron */}
-          <button
-            onClick={() => setWetDryOpen((v) => !v)}
-            className={['btn-3d btn-3d-led px-2.5', wetDryOpen ? 'btn-3d-on' : ''].join(' ')}
-            title={wetDryOpen ? 'Hide wet/dry' : 'Show wet/dry'}
-            style={{ opacity: simActive ? 1 : 0.35, pointerEvents: simActive ? 'auto' : 'none' }}
-          >
-            <svg
-              width="10" height="6" viewBox="0 0 10 6" fill="none"
-              style={{ transform: wetDryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
+          {/* Wet/dry chevron — only visible when a sim is active */}
+          {simActive && (
+            <button
+              onClick={() => setWetDryOpen((v) => !v)}
+              className={['btn-3d btn-3d-led px-2.5', wetDryOpen ? 'btn-3d-on' : ''].join(' ')}
+              title={wetDryOpen ? 'Hide wet/dry' : 'Show wet/dry'}
+              aria-label="Toggle wet/dry mix slider"
+              aria-expanded={wetDryOpen}
             >
-              <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+              <svg
+                width="10" height="6" viewBox="0 0 10 6" fill="none"
+                style={{ transform: wetDryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
+              >
+                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
 
           <Divider />
 

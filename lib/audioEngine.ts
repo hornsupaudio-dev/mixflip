@@ -56,6 +56,10 @@ class AudioEngine {
   private analyserR: AnalyserNode | null = null;
   private _meterBufL: Float32Array<ArrayBuffer> | null = null;
   private _meterBufR: Float32Array<ArrayBuffer> | null = null;
+
+  // ── Spectrum analyser (mono sum, larger FFT) ────────────────────────────────
+  private analyserSpectrum: AnalyserNode | null = null;
+  private _spectrumBuf: Float32Array<ArrayBuffer> | null = null;
   private meterListeners = new Set<MeterListener>();
   private _meterSnapshot: MeterSnapshot = SILENT_METER;
   // Ballistics state (linear amplitude, 0..1+)
@@ -254,6 +258,19 @@ class AudioEngine {
     meterSplitter.connect(this.analyserL, 0);
     meterSplitter.connect(this.analyserR, 1);
 
+    // ── Spectrum analyser — mono sum at insertOut, 4096-pt FFT ──────────────
+    // Same tap point so the spectrum reflects what the meter measures.
+    this.analyserSpectrum = ctx.createAnalyser();
+    this.analyserSpectrum.fftSize = 4096;
+    this.analyserSpectrum.smoothingTimeConstant = 0.85;
+    this.analyserSpectrum.minDecibels = -90;
+    this.analyserSpectrum.maxDecibels = 0;
+    this.analyserSpectrum.channelCount = 1;
+    this.analyserSpectrum.channelCountMode = 'explicit';
+    this.analyserSpectrum.channelInterpretation = 'speakers'; // L+R sum at −6 dB
+    this._spectrumBuf = new Float32Array(this.analyserSpectrum.frequencyBinCount);
+    this.insertOut.connect(this.analyserSpectrum);
+
     // Final output
     this.insertOut.connect(this.masterGain!);
   }
@@ -364,6 +381,50 @@ class AudioEngine {
   };
 
   getMeterSnapshot = (): MeterSnapshot => this._meterSnapshot;
+
+  // ── Spectrum API ────────────────────────────────────────────────────────────
+
+  // Returns the internal frequency-bin buffer (dB values). Caller reads only.
+  // null if the audio graph hasn't been built yet.
+  getSpectrumBins(): Float32Array<ArrayBuffer> | null {
+    if (!this.analyserSpectrum || !this._spectrumBuf) return null;
+    this.analyserSpectrum.getFloatFrequencyData(this._spectrumBuf);
+    return this._spectrumBuf;
+  }
+
+  get sampleRate(): number {
+    return this._ctx?.sampleRate ?? 44100;
+  }
+
+  // Computes the combined dB frequency response of a 4-band EQ at the given
+  // frequencies, summed across bands. Uses temp BiquadFilterNodes so the
+  // response reflects the dialed-in band PARAMS, not the live (possibly
+  // bypassed) engine nodes — useful for previewing a setting before enabling.
+  getEQResponseFromParams(
+    bands: EQBandParams[],
+    freqs: Float32Array<ArrayBuffer>,
+    magOutDb: Float32Array<ArrayBuffer>,
+  ) {
+    const ctx = this._ctx;
+    if (!ctx) return;
+    const types: BiquadFilterType[] = ['lowshelf', 'peaking', 'peaking', 'highshelf'];
+    const tmpMag = new Float32Array(freqs.length);
+    const tmpPhase = new Float32Array(freqs.length);
+    magOutDb.fill(0);
+    for (let i = 0; i < bands.length && i < types.length; i++) {
+      const band = bands[i];
+      const node = ctx.createBiquadFilter();
+      node.type = types[i];
+      node.frequency.value = band.freq;
+      node.gain.value = band.gain;
+      node.Q.value = band.q;
+      node.getFrequencyResponse(freqs, tmpMag, tmpPhase);
+      for (let j = 0; j < freqs.length; j++) {
+        magOutDb[j] += 20 * Math.log10(Math.max(tmpMag[j], 1e-10));
+      }
+      // node is not connected; GC will reclaim it
+    }
+  }
 
   get isPlaying(): boolean {
     return !!this.currentSource;

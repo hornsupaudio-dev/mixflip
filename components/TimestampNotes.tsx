@@ -4,6 +4,9 @@ import { useState, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { audioEngine } from '@/lib/audioEngine';
 import { useMixFlipStore } from '@/store/mixflipStore';
+import SpectrumDisplay from '@/components/SpectrumDisplay';
+
+type ScreenMode = 'notes' | 'scope';
 
 function formatTime(seconds: number): string {
   const s = Math.max(0, seconds);
@@ -42,6 +45,7 @@ export default function TimestampNotes() {
   const [editDraft, setEditDraft] = useState('');
   const [litNotes, setLitNotes] = useState<Set<string>>(new Set());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [mode, setMode] = useState<ScreenMode>('notes');
 
   const currentTime = useSyncExternalStore(
     audioEngine.subscribeToTime,
@@ -162,22 +166,71 @@ export default function TimestampNotes() {
         {/* ── Left column: header + list + input ────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
 
-          {/* Header: dot + label + count */}
+          {/* Header: dot + label + mode toggle + (count in notes mode) */}
           <div className="notes-screen-header flex items-center gap-2">
             <span
               className="w-1.5 h-1.5 rounded-full shrink-0"
               style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
             />
-            <span className="font-mono text-[12px] uppercase tracking-wider truncate" style={{ color: phosphor }}>
-              {notesTrack ? `${truncateMiddle(notesTrack.label)} : Notes` : '— : Notes'}
+            <span className="font-mono text-[12px] uppercase tracking-wider truncate min-w-0" style={{ color: phosphor }}>
+              {notesTrack
+                ? `${truncateMiddle(notesTrack.label, 18)} : ${mode === 'notes' ? 'Notes' : 'Scope'}`
+                : `— : ${mode === 'notes' ? 'Notes' : 'Scope'}`}
             </span>
-            {hasNotes && (
-              <span className="font-mono text-[10px] shrink-0 ml-1" style={{ color: `${phosphor}45` }}>
+
+            {/* NOTES / SCOPE toggle */}
+            <div
+              className="flex items-center rounded-[3px] overflow-hidden shrink-0 ml-auto"
+              style={{ border: `1px solid ${phosphor}30` }}
+              role="tablist"
+              aria-label="Screen mode"
+            >
+              <button
+                onClick={() => setMode('notes')}
+                className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
+                style={{
+                  background: mode === 'notes' ? `${phosphor}30` : 'transparent',
+                  color: mode === 'notes' ? phosphor : `${phosphor}60`,
+                  textShadow: mode === 'notes' ? `0 0 4px ${phosphor}88` : 'none',
+                }}
+                role="tab"
+                aria-selected={mode === 'notes'}
+              >
+                Notes
+              </button>
+              <div className="w-px h-3" style={{ background: `${phosphor}30` }} />
+              <button
+                onClick={() => setMode('scope')}
+                className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
+                style={{
+                  background: mode === 'scope' ? `${phosphor}30` : 'transparent',
+                  color: mode === 'scope' ? phosphor : `${phosphor}60`,
+                  textShadow: mode === 'scope' ? `0 0 4px ${phosphor}88` : 'none',
+                }}
+                role="tab"
+                aria-selected={mode === 'scope'}
+              >
+                Scope
+              </button>
+            </div>
+
+            {mode === 'notes' && hasNotes && (
+              <span className="font-mono text-[10px] shrink-0" style={{ color: `${phosphor}45` }}>
                 {notesTrack!.notes.length}
               </span>
             )}
           </div>
 
+          {/* Body — notes list + input, OR spectrum scope */}
+          {mode === 'scope' ? (
+            <div
+              className="flex-1 min-h-0 mt-2 relative"
+              style={{ zIndex: 5, minHeight: 140 }}
+            >
+              <SpectrumDisplay />
+            </div>
+          ) : (
+          <>
           {/* Note list */}
           {isActive && (
             <ul className="notes-screen-list space-y-1.5 pr-1">
@@ -262,9 +315,12 @@ export default function TimestampNotes() {
               style={{ color: phosphor, borderBottom: `1px solid ${phosphor}55`, paddingBottom: '2px', caretColor: phosphor }}
             />
           </div>
+          </>
+          )}
         </div>
 
-        {/* ── Right sidebar: icon buttons ────────────────────────────────── */}
+        {/* ── Right sidebar: icon buttons (notes mode only) ──────────────── */}
+        {mode === 'notes' && (
         <div className="flex flex-col gap-2 shrink-0 justify-end pb-0.5">
           {/* PIN */}
           <button
@@ -330,6 +386,7 @@ export default function TimestampNotes() {
             </svg>
           </button>
         </div>
+        )}
 
       </div>
     </div>

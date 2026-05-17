@@ -61,12 +61,6 @@ function formatTime(seconds: number): string {
   return `${m}:${sec.toString().padStart(2, '0')}`;
 }
 
-function truncateMiddle(s: string, maxLen = 26): string {
-  if (s.length <= maxLen) return s;
-  const keep = Math.floor((maxLen - 1) / 2);
-  return `${s.slice(0, keep)}…${s.slice(-keep)}`;
-}
-
 const DEAD_COLOR = '#3a342e';
 
 export default function TimestampNotes() {
@@ -213,16 +207,19 @@ export default function TimestampNotes() {
         {/* ── Left column: header + list + input ────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
 
-          {/* Header: dot + label + (band readout in scope) + mode toggle */}
+          {/* Header: dot + mode label + (band readout in scope) + mode toggle.
+              Track identity comes from the dot color + the marquee + the slot
+              button — no need to repeat the filename here. */}
           <div className="notes-screen-header flex items-center gap-2 flex-wrap">
             <span
               className="w-1.5 h-1.5 rounded-full shrink-0"
               style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
             />
-            <span className="font-mono text-[12px] uppercase tracking-wider truncate min-w-0" style={{ color: phosphor }}>
-              {notesTrack
-                ? `${truncateMiddle(notesTrack.label, 18)} : ${mode === 'notes' ? 'Notes' : 'Scope'}`
-                : `— : ${mode === 'notes' ? 'Notes' : 'Scope'}`}
+            <span
+              className="font-mono text-[12px] uppercase tracking-wider shrink-0"
+              style={{ color: phosphor }}
+            >
+              {mode === 'notes' ? 'Notes' : 'Scope'}
             </span>
 
             {/* Right cluster: band readout (scope only), count (notes only), toggle */}

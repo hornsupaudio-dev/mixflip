@@ -7,7 +7,12 @@ import { audioEngine } from '@/lib/audioEngine';
 import { getSpectrumAvg, updateSpectrumAvg } from '@/lib/audioStore';
 
 // ── Constants ───────────────────────────────────────────────────────────────
-const SPEC_MIN_DB = -55;  // taller peaks; raised from -75
+const SPEC_MIN_DB = -80;  // canvas floor
+// Non-linear dB→Y curve: pow(0.65) on the linear fraction expands the upper
+// portion so typical music levels (-30 to -10 dB) fill the upper half of the
+// canvas instead of sitting in the middle. Quiet bins still visible at the
+// bottom, loud peaks reach higher.
+const SPEC_CURVE_POW = 0.65;
 const EQ_RANGE_DB = 15;
 const F_MIN = 20;
 const F_MAX = 20000;
@@ -283,7 +288,9 @@ export default function SpectrumDisplay({ selectedBand, onSelectBand }: Props) {
         const dbToY = (db: number) => {
           if (db <= SPEC_MIN_DB) return ch;
           if (db >= 0) return 0;
-          return ch - ((db - SPEC_MIN_DB) / -SPEC_MIN_DB) * ch;
+          const linearFrac = (db - SPEC_MIN_DB) / -SPEC_MIN_DB;
+          const boosted = Math.pow(linearFrac, SPEC_CURVE_POW);
+          return ch - boosted * ch;
         };
 
         ctx.beginPath();

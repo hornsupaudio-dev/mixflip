@@ -571,46 +571,58 @@ body::after {
   }
 
   /* ── CRT-style slider (terminal screen, inherits text color as phosphor) */
-  .crt-slider {
-    appearance: none;
-    -webkit-appearance: none;
-    background: transparent;
+  /* Belt-and-braces specificity + !important: Tailwind v4 preflight and
+     browser UA styles otherwise leak the default chunky thumb through. */
+  input[type="range"].crt-slider {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    background: transparent !important;
     cursor: pointer;
-    height: 14px;
+    height: 16px;
     padding: 0;
-  }
-  .crt-slider::-webkit-slider-runnable-track {
-    height: 1px;
-    background: currentColor;
-    opacity: 0.3;
-  }
-  .crt-slider::-webkit-slider-thumb {
-    appearance: none;
-    -webkit-appearance: none;
-    width: 5px;
-    height: 12px;
-    background: currentColor;
+    margin: 0;
+    outline: none;
     border: none;
-    border-radius: 1px;
-    margin-top: -5.5px;
-    box-shadow: 0 0 5px currentColor;
+  }
+  input[type="range"].crt-slider::-webkit-slider-runnable-track {
+    -webkit-appearance: none;
+    background: currentColor !important;
+    opacity: 0.3;
+    height: 1px;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+  }
+  input[type="range"].crt-slider::-webkit-slider-thumb {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    width: 3px !important;
+    height: 14px !important;
+    background: currentColor !important;
+    background-image: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    margin-top: -6.5px !important;
+    box-shadow: 0 0 6px currentColor, 0 0 2px currentColor !important;
     cursor: grab;
   }
-  .crt-slider:active::-webkit-slider-thumb {
+  input[type="range"].crt-slider:active::-webkit-slider-thumb {
     cursor: grabbing;
   }
-  .crt-slider::-moz-range-track {
-    height: 1px;
-    background: currentColor;
+  input[type="range"].crt-slider::-moz-range-track {
+    background: currentColor !important;
     opacity: 0.3;
-  }
-  .crt-slider::-moz-range-thumb {
-    width: 5px;
-    height: 12px;
-    background: currentColor;
+    height: 1px;
     border: none;
-    border-radius: 1px;
-    box-shadow: 0 0 5px currentColor;
+    border-radius: 0;
+  }
+  input[type="range"].crt-slider::-moz-range-thumb {
+    width: 3px !important;
+    height: 14px !important;
+    background: currentColor !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: 0 0 6px currentColor, 0 0 2px currentColor !important;
     cursor: grab;
   }
 

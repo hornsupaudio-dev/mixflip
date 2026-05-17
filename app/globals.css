@@ -309,13 +309,14 @@ body::after {
     display: flex;
     flex-direction: column;
     transition: box-shadow 150ms ease-out;
-    min-height: 220px; /* grows with header on mobile */
-    height: auto;
+    /* Fixed height — same CRT footprint in both Notes and Scope modes.
+       Notes content scrolls internally; Scope canvas fills via flex. */
+    height: 248px;
   }
 
   @media (min-width: 640px) {
     .notes-screen {
-      min-height: 268px; /* CRT terminal floor on desktop — grows in scope mode */
+      height: 280px;
     }
   }
 

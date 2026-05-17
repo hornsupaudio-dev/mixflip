@@ -283,8 +283,8 @@ export default function TimestampNotes() {
           {/* Body — notes list + input, OR interactive EQ-on-spectrum scope */}
           {mode === 'scope' ? (
             <div
-              className="flex-1 mt-2 relative"
-              style={{ zIndex: 5, minHeight: 200 }}
+              className="flex-1 min-h-0 mt-2 relative"
+              style={{ zIndex: 5 }}
             >
               <SpectrumDisplay
                 selectedBand={selectedBand}

@@ -570,6 +570,50 @@ body::after {
     cursor: pointer;
   }
 
+  /* ── CRT-style slider (terminal screen, inherits text color as phosphor) */
+  .crt-slider {
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    cursor: pointer;
+    height: 14px;
+    padding: 0;
+  }
+  .crt-slider::-webkit-slider-runnable-track {
+    height: 1px;
+    background: currentColor;
+    opacity: 0.3;
+  }
+  .crt-slider::-webkit-slider-thumb {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 5px;
+    height: 12px;
+    background: currentColor;
+    border: none;
+    border-radius: 1px;
+    margin-top: -5.5px;
+    box-shadow: 0 0 5px currentColor;
+    cursor: grab;
+  }
+  .crt-slider:active::-webkit-slider-thumb {
+    cursor: grabbing;
+  }
+  .crt-slider::-moz-range-track {
+    height: 1px;
+    background: currentColor;
+    opacity: 0.3;
+  }
+  .crt-slider::-moz-range-thumb {
+    width: 5px;
+    height: 12px;
+    background: currentColor;
+    border: none;
+    border-radius: 1px;
+    box-shadow: 0 0 5px currentColor;
+    cursor: grab;
+  }
+
   /* ── Tape label tab ──────────────────────────────────────────────────── */
   .tape-tab {
     display: flex;

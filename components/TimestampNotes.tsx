@@ -43,8 +43,8 @@ function BandReadout({
             type="range" min="0.3" max="8" step="0.1"
             value={band.q}
             onChange={(e) => setTrackEQ(trackId, bandIndex, { q: parseFloat(e.target.value) })}
-            className="hw-slider"
-            style={{ width: 56 }}
+            className="crt-slider"
+            style={{ width: 56, color }}
             aria-label={`${def.name} Q`}
           />
           <span className="tabular-nums opacity-70" style={{ minWidth: 18 }}>{band.q.toFixed(1)}</span>

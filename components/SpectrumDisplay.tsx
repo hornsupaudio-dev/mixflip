@@ -359,18 +359,20 @@ export default function SpectrumDisplay({ selectedBand, onSelectBand }: Props) {
     <div className="relative w-full h-full overflow-hidden">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
 
-      {/* Top-right floating EQ controls */}
+      {/* Top-right floating EQ controls — phosphor-terminal style */}
       {trackId && (
-        <div className="absolute top-1.5 right-1.5 flex items-center gap-1.5 z-20">
+        <div className="absolute top-1.5 right-1.5 flex items-center gap-2 z-20">
           <button
             onClick={() => resetTrackEQ(trackId)}
             title="Reset all EQ bands to 0 dB"
             aria-label="Reset EQ"
-            className="px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-wider rounded transition-colors"
+            className="font-mono text-[9px] uppercase tracking-wider transition-opacity duration-150 hover:opacity-100"
             style={{
-              background: 'rgba(8,6,4,0.6)',
-              color: 'rgba(232,221,208,0.55)',
-              border: '1px solid rgba(232,221,208,0.16)',
+              color: `${color}66`,
+              background: 'transparent',
+              border: 'none',
+              padding: '1px 2px',
+              opacity: 0.85,
             }}
           >
             Reset
@@ -380,8 +382,13 @@ export default function SpectrumDisplay({ selectedBand, onSelectBand }: Props) {
             title={eqEnabled ? 'Bypass EQ' : 'Engage EQ'}
             aria-label="Toggle EQ"
             aria-pressed={eqEnabled}
-            className={['btn-3d btn-3d-led', eqEnabled ? 'btn-3d-on' : ''].join(' ')}
-            style={{ fontSize: 8, padding: '2px 7px' }}
+            className="px-1.5 py-[1px] font-mono text-[9px] uppercase tracking-wider rounded-[3px] transition-all duration-150"
+            style={{
+              background: eqEnabled ? `${color}30` : 'transparent',
+              color: eqEnabled ? color : `${color}66`,
+              border: `1px solid ${color}30`,
+              textShadow: eqEnabled ? `0 0 4px ${color}88` : 'none',
+            }}
           >
             EQ
           </button>

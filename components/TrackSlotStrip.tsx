@@ -140,19 +140,14 @@ export default function TrackSlotStrip({
           className="btn-3d flex-1 justify-center relative"
           style={{
             padding: '0 4px',
-            opacity: isFirstEmpty ? 0.6 : 0.28,
-            color: isFirstEmpty ? 'rgba(232,221,208,0.55)' : 'rgba(232,221,208,0.18)',
+            opacity: isFirstEmpty ? 0.65 : 0.28,
+            color: isFirstEmpty ? 'rgba(232,221,208,0.6)' : 'rgba(232,221,208,0.18)',
             touchAction: 'manipulation',
           }}
         >
-          {isFirstEmpty ? (
-            <svg width="11" height="11" viewBox="0 0 11 11" fill="none" aria-hidden>
-              <path d="M5.5 1.5V9.5M1.5 5.5H9.5"
-                    stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <span className="font-mono text-[10px] tracking-wider">{label}</span>
-          )}
+          <span className="font-mono text-[10px] tracking-wider">
+            {label}{isFirstEmpty ? '+' : ''}
+          </span>
         </button>
       );
     }

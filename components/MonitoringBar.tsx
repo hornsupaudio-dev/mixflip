@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMixFlipStore } from '@/store/mixflipStore';
 import type { SpeakerSim } from '@/lib/audioEngine';
-import EQPanel from '@/components/EQPanel';
 
 const SIMS: { value: Exclude<SpeakerSim, 'off'>; label: string }[] = [
   { value: 'car', label: 'Car' },
@@ -25,31 +24,24 @@ function Divider() {
 
 export default function MonitoringBar() {
   const [wetDryOpen, setWetDryOpen] = useState(false);
-  const [eqOpen, setEqOpen] = useState(false);
 
   const {
     monoEnabled, speakerSim, simWetDry, volumeMatchEnabled, volMatchPulsing, masterVolume, customIRs,
-    hasActiveTrack, eqEngaged,
     toggleMono, setSpeakerSim, setSimWetDry, toggleVolumeMatch, setMasterVolume,
-  } = useMixFlipStore(useShallow((s) => {
-    const active = s.tracks.find((t) => t.id === s.activeTrackId);
-    return {
-      monoEnabled: s.monoEnabled,
-      speakerSim: s.speakerSim,
-      simWetDry: s.simWetDry,
-      volumeMatchEnabled: s.volumeMatchEnabled,
-      volMatchPulsing: s.volMatchPulsing,
-      masterVolume: s.masterVolume,
-      customIRs: s.customIRs,
-      hasActiveTrack: !!active,
-      eqEngaged: !!active?.eq.enabled,
-      toggleMono: s.toggleMono,
-      setSpeakerSim: s.setSpeakerSim,
-      setSimWetDry: s.setSimWetDry,
-      toggleVolumeMatch: s.toggleVolumeMatch,
-      setMasterVolume: s.setMasterVolume,
-    };
-  }));
+  } = useMixFlipStore(useShallow((s) => ({
+    monoEnabled: s.monoEnabled,
+    speakerSim: s.speakerSim,
+    simWetDry: s.simWetDry,
+    volumeMatchEnabled: s.volumeMatchEnabled,
+    volMatchPulsing: s.volMatchPulsing,
+    masterVolume: s.masterVolume,
+    customIRs: s.customIRs,
+    toggleMono: s.toggleMono,
+    setSpeakerSim: s.setSpeakerSim,
+    setSimWetDry: s.setSimWetDry,
+    toggleVolumeMatch: s.toggleVolumeMatch,
+    setMasterVolume: s.setMasterVolume,
+  })));
 
   const simActive = speakerSim !== 'off';
   const simIdx = SIM_CYCLE.indexOf(speakerSim);
@@ -144,20 +136,6 @@ export default function MonitoringBar() {
             </button>
           )}
 
-          <Divider />
-
-          {/* EQ toggle — also lights when EQ is engaged on the active track */}
-          <button
-            onClick={() => setEqOpen((v) => !v)}
-            disabled={!hasActiveTrack}
-            className={['btn-3d btn-3d-led', eqOpen || eqEngaged ? 'btn-3d-on' : ''].join(' ')}
-            style={{ opacity: hasActiveTrack ? 1 : 0.35 }}
-            title={!hasActiveTrack ? 'Load a track to use EQ' : eqOpen ? 'Close EQ' : 'Open EQ'}
-            aria-label="Toggle EQ panel"
-            aria-expanded={eqOpen}
-          >
-            <span className="text-[9px]">EQ</span>
-          </button>
         </div>
 
         {/* Row 2: Vol/Trim slider */}
@@ -194,12 +172,6 @@ export default function MonitoringBar() {
           </div>
         )}
 
-        {/* EQ panel — revealed via EQ button */}
-        {eqOpen && (
-          <div className="border-t border-white/5 pt-2">
-            <EQPanel />
-          </div>
-        )}
       </div>
 
       {/* ── DESKTOP layout ─────────────────────────────────────────────────── */}
@@ -251,27 +223,7 @@ export default function MonitoringBar() {
             ))}
           </div>
 
-          <Divider />
-
-          <button
-            onClick={() => setEqOpen((v) => !v)}
-            disabled={!hasActiveTrack}
-            className={['btn-3d btn-3d-led', eqOpen || eqEngaged ? 'btn-3d-on' : ''].join(' ')}
-            style={{ opacity: hasActiveTrack ? 1 : 0.35 }}
-            title={!hasActiveTrack ? 'Load a track to use EQ' : eqOpen ? 'Close EQ' : 'Open parametric EQ'}
-            aria-label="Toggle EQ panel"
-            aria-expanded={eqOpen}
-          >
-            EQ
-          </button>
         </div>
-
-        {/* EQ panel — revealed via EQ button */}
-        {eqOpen && (
-          <div className="border-t border-white/5 pt-1">
-            <EQPanel />
-          </div>
-        )}
 
         {/* Row 2: sliders */}
         <div className="flex items-end gap-4">

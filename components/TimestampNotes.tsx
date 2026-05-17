@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { audioEngine } from '@/lib/audioEngine';
 import { useMixFlipStore } from '@/store/mixflipStore';
 import SpectrumDisplay from '@/components/SpectrumDisplay';
+import EQPanel from '@/components/EQPanel';
 
 type ScreenMode = 'notes' | 'scope';
 
@@ -221,13 +222,19 @@ export default function TimestampNotes() {
             )}
           </div>
 
-          {/* Body — notes list + input, OR spectrum scope */}
+          {/* Body — notes list + input, OR EQ controls + spectrum scope */}
           {mode === 'scope' ? (
             <div
-              className="flex-1 min-h-0 mt-2 relative"
-              style={{ zIndex: 5, minHeight: 140 }}
+              className="flex flex-col flex-1 min-h-0 mt-2 gap-3 relative"
+              style={{ zIndex: 5 }}
             >
-              <SpectrumDisplay />
+              <EQPanel />
+              <div
+                className="flex-1 relative"
+                style={{ minHeight: 140 }}
+              >
+                <SpectrumDisplay />
+              </div>
             </div>
           ) : (
           <>

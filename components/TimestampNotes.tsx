@@ -198,6 +198,9 @@ export default function TimestampNotes() {
     'inset 0 0 0 1px rgba(0,0,0,0.7)',
   ].join(', ');
 
+  // Track-color-aware divider for the segmented control wells
+  const segDivider = `1px solid ${phosphor}30`;
+
   return (
     <div
       className="notes-screen"
@@ -207,147 +210,139 @@ export default function TimestampNotes() {
         transition: 'opacity 300ms ease, box-shadow 150ms',
       }}
     >
-      <div className="flex gap-3 flex-1 min-h-0">
+      {/* ── Header — pulled OUT of the body row so it always spans the full
+            screen width regardless of whether the notes sidebar is rendered. */}
+      <div className="notes-screen-header flex items-center gap-2 flex-wrap">
+        <span
+          className="w-1.5 h-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
+        />
+        <span
+          className="font-mono text-[12px] uppercase tracking-wider shrink-0"
+          style={{ color: phosphor }}
+        >
+          {mode === 'notes' ? 'Notes' : 'Scope'}
+        </span>
 
-        {/* ── Left column: header + list + input ────────────────────────── */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-0">
-
-          {/* Header: dot + mode label + (band readout in scope) + mode toggle.
-              Track identity comes from the dot color + the marquee + the slot
-              button — no need to repeat the filename here. */}
-          <div className="notes-screen-header flex items-center gap-2 flex-wrap">
-            <span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
+        {/* Right cluster: band readout (scope+selected) → [RESET|EQ] well → [NOTES|SCOPE] well */}
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          {mode === 'scope' && selectedBand !== null && activeTrack && (
+            <BandReadout
+              band={activeTrack.eq.bands[selectedBand]}
+              bandIndex={selectedBand}
+              trackId={activeTrack.id}
+              color={phosphor}
             />
-            <span
-              className="font-mono text-[12px] uppercase tracking-wider shrink-0"
-              style={{ color: phosphor }}
-            >
-              {mode === 'notes' ? 'Notes' : 'Scope'}
+          )}
+
+          {mode === 'notes' && hasNotes && (
+            <span className="font-mono text-[10px] shrink-0" style={{ color: `${phosphor}45` }}>
+              {notesTrack!.notes.length}
             </span>
+          )}
 
-            {/* Right cluster: band readout (scope+selected) → RESET → EQ → toggle.
-                RESET and EQ stay put in both modes so positions don't shuffle
-                when you swap NOTES ↔ SCOPE. */}
-            <div className="ml-auto flex items-center gap-2 shrink-0">
-              {mode === 'scope' && selectedBand !== null && activeTrack && (
-                <BandReadout
-                  band={activeTrack.eq.bands[selectedBand]}
-                  bandIndex={selectedBand}
-                  trackId={activeTrack.id}
-                  color={phosphor}
-                />
-              )}
-
-              {mode === 'notes' && hasNotes && (
-                <span className="font-mono text-[10px] shrink-0" style={{ color: `${phosphor}45` }}>
-                  {notesTrack!.notes.length}
-                </span>
-              )}
-
-              {/* RESET — momentary, flashes on press for feedback */}
-              <button
-                onClick={() => {
-                  if (!activeTrack) return;
-                  setResetFlash(true);
-                  resetTrackEQ(activeTrack.id);
-                  setTimeout(() => setResetFlash(false), 320);
-                }}
-                disabled={!activeTrack}
-                title="Reset all EQ bands to 0 dB"
-                aria-label="Reset EQ"
-                className="font-mono text-[8px] uppercase tracking-wider rounded-[3px] shrink-0"
-                style={{
-                  background: resetFlash ? `${phosphor}45` : 'transparent',
-                  color: resetFlash
-                    ? phosphor
-                    : activeTrack ? `${phosphor}70` : `${phosphor}25`,
-                  border: `1px solid ${resetFlash ? `${phosphor}90` : `${phosphor}30`}`,
-                  textShadow: resetFlash ? `0 0 6px ${phosphor}` : 'none',
-                  transform: resetFlash ? 'scale(0.94)' : 'scale(1)',
-                  transition: resetFlash
-                    ? 'transform 80ms ease-out, background 80ms, color 80ms, border-color 80ms, text-shadow 80ms'
-                    : 'transform 250ms ease-out, background 250ms, color 250ms, border-color 250ms, text-shadow 250ms',
-                  padding: '1px 6px',
-                  cursor: activeTrack ? 'pointer' : 'default',
-                }}
-              >
-                Reset
-              </button>
-
-              {/* EQ on/off toggle */}
-              <button
-                onClick={() => activeTrack && toggleTrackEQ(activeTrack.id)}
-                disabled={!activeTrack}
-                title={eqEnabled ? 'Bypass EQ' : 'Engage EQ'}
-                aria-label="Toggle EQ"
-                aria-pressed={eqEnabled}
-                className="font-mono text-[8px] uppercase tracking-wider rounded-[3px] shrink-0 transition-all duration-150 active:scale-95"
-                style={{
-                  background: eqEnabled ? `${phosphor}30` : 'transparent',
-                  color: eqEnabled
-                    ? phosphor
-                    : activeTrack ? `${phosphor}70` : `${phosphor}25`,
-                  border: `1px solid ${eqEnabled ? `${phosphor}55` : `${phosphor}30`}`,
-                  textShadow: eqEnabled ? `0 0 4px ${phosphor}88` : 'none',
-                  padding: '1px 6px',
-                  cursor: activeTrack ? 'pointer' : 'default',
-                }}
-              >
-                EQ
-              </button>
-
-              {/* NOTES / SCOPE toggle */}
-              <div
-                className="flex items-center rounded-[3px] overflow-hidden shrink-0"
-                style={{ border: `1px solid ${phosphor}30` }}
-                role="tablist"
-                aria-label="Screen mode"
-              >
-                <button
-                  onClick={() => setMode('notes')}
-                  className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
-                  style={{
-                    background: mode === 'notes' ? `${phosphor}30` : 'transparent',
-                    color: mode === 'notes' ? phosphor : `${phosphor}60`,
-                    textShadow: mode === 'notes' ? `0 0 4px ${phosphor}88` : 'none',
-                  }}
-                  role="tab"
-                  aria-selected={mode === 'notes'}
-                >
-                  Notes
-                </button>
-                <div className="w-px h-3" style={{ background: `${phosphor}30` }} />
-                <button
-                  onClick={() => setMode('scope')}
-                  className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
-                  style={{
-                    background: mode === 'scope' ? `${phosphor}30` : 'transparent',
-                    color: mode === 'scope' ? phosphor : `${phosphor}60`,
-                    textShadow: mode === 'scope' ? `0 0 4px ${phosphor}88` : 'none',
-                  }}
-                  role="tab"
-                  aria-selected={mode === 'scope'}
-                >
-                  Scope
-                </button>
-              </div>
-            </div>
+          {/* RESET | EQ — connected segmented well, matches NOTES|SCOPE styling */}
+          <div
+            className="flex items-center rounded-[3px] overflow-hidden shrink-0"
+            style={{ border: segDivider }}
+          >
+            <button
+              onClick={() => {
+                if (!activeTrack) return;
+                setResetFlash(true);
+                resetTrackEQ(activeTrack.id);
+                setTimeout(() => setResetFlash(false), 320);
+              }}
+              disabled={!activeTrack}
+              title="Reset all EQ bands to 0 dB"
+              aria-label="Reset EQ"
+              className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider"
+              style={{
+                background: resetFlash ? `${phosphor}45` : 'transparent',
+                color: resetFlash
+                  ? phosphor
+                  : activeTrack ? `${phosphor}70` : `${phosphor}25`,
+                textShadow: resetFlash ? `0 0 6px ${phosphor}` : 'none',
+                transition: resetFlash
+                  ? 'background 80ms, color 80ms, text-shadow 80ms'
+                  : 'background 250ms, color 250ms, text-shadow 250ms',
+                cursor: activeTrack ? 'pointer' : 'default',
+              }}
+            >
+              Reset
+            </button>
+            <div className="w-px h-3" style={{ background: `${phosphor}30` }} />
+            <button
+              onClick={() => activeTrack && toggleTrackEQ(activeTrack.id)}
+              disabled={!activeTrack}
+              title={eqEnabled ? 'Bypass EQ' : 'Engage EQ'}
+              aria-label="Toggle EQ"
+              aria-pressed={eqEnabled}
+              className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
+              style={{
+                background: eqEnabled ? `${phosphor}30` : 'transparent',
+                color: eqEnabled
+                  ? phosphor
+                  : activeTrack ? `${phosphor}70` : `${phosphor}25`,
+                textShadow: eqEnabled ? `0 0 4px ${phosphor}88` : 'none',
+                cursor: activeTrack ? 'pointer' : 'default',
+              }}
+            >
+              EQ
+            </button>
           </div>
 
-          {/* Body — notes list + input, OR interactive EQ-on-spectrum scope */}
-          {mode === 'scope' ? (
-            <div
-              className="flex-1 min-h-0 mt-2 relative"
-              style={{ zIndex: 5 }}
+          {/* NOTES / SCOPE toggle */}
+          <div
+            className="flex items-center rounded-[3px] overflow-hidden shrink-0"
+            style={{ border: segDivider }}
+            role="tablist"
+            aria-label="Screen mode"
+          >
+            <button
+              onClick={() => setMode('notes')}
+              className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
+              style={{
+                background: mode === 'notes' ? `${phosphor}30` : 'transparent',
+                color: mode === 'notes' ? phosphor : `${phosphor}60`,
+                textShadow: mode === 'notes' ? `0 0 4px ${phosphor}88` : 'none',
+              }}
+              role="tab"
+              aria-selected={mode === 'notes'}
             >
-              <SpectrumDisplay
-                selectedBand={selectedBand}
-                onSelectBand={setSelectedBand}
-              />
-            </div>
-          ) : (
+              Notes
+            </button>
+            <div className="w-px h-3" style={{ background: `${phosphor}30` }} />
+            <button
+              onClick={() => setMode('scope')}
+              className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
+              style={{
+                background: mode === 'scope' ? `${phosphor}30` : 'transparent',
+                color: mode === 'scope' ? phosphor : `${phosphor}60`,
+                textShadow: mode === 'scope' ? `0 0 4px ${phosphor}88` : 'none',
+              }}
+              role="tab"
+              aria-selected={mode === 'scope'}
+            >
+              Scope
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Body row: content column + (notes-mode-only) sidebar ─────────── */}
+      <div className="flex gap-3 flex-1 min-h-0">
+
+        {/* Body — spectrum (scope) or notes-list+input (notes) */}
+        {mode === 'scope' ? (
+          <div className="flex-1 min-h-0 relative" style={{ zIndex: 5 }}>
+            <SpectrumDisplay
+              selectedBand={selectedBand}
+              onSelectBand={setSelectedBand}
+            />
+          </div>
+        ) : (
+          <div className="flex-1 flex flex-col min-w-0 min-h-0">
           <>
           {/* Note list */}
           {isActive && (
@@ -434,8 +429,8 @@ export default function TimestampNotes() {
             />
           </div>
           </>
+          </div>
           )}
-        </div>
 
         {/* ── Right sidebar: icon buttons (notes mode only) ──────────────── */}
         {mode === 'notes' && (

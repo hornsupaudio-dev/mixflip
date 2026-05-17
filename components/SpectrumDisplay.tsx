@@ -62,7 +62,6 @@ function EQNode({
   onSelect: () => void;
 }) {
   const setTrackEQ = useMixFlipStore((s) => s.setTrackEQ);
-  const toggleTrackEQ = useMixFlipStore((s) => s.toggleTrackEQ);
   const def = BAND_DEFS[bandIndex];
   const [dragging, setDragging] = useState(false);
   const nodeRef = useRef<HTMLDivElement>(null);
@@ -80,10 +79,9 @@ function EQNode({
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     onSelect();
-    if (!enabled) {
-      toggleTrackEQ(trackId);
-      return;
-    }
+    // Always start drag tracking — even when EQ is bypassed. The store's
+    // setTrackEQ auto-engages EQ as soon as the drag produces a non-zero
+    // gain, so the user gets engage + adjust in a single gesture.
     e.currentTarget.setPointerCapture(e.pointerId);
     dragStart.current = { x: e.clientX, y: e.clientY, freq, gain };
     setDragging(true);

@@ -388,19 +388,24 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
 
     setTrackEQ: (trackId, bandIndex, params) => {
       set((s) => ({
-        tracks: s.tracks.map((t) =>
-          t.id === trackId
-            ? {
-                ...t,
-                eq: {
-                  ...t.eq,
-                  bands: t.eq.bands.map((b, i) =>
-                    i === bandIndex ? { ...b, ...params } : b,
-                  ) as TrackEQ['bands'],
-                },
-              }
-            : t,
-        ),
+        tracks: s.tracks.map((t) => {
+          if (t.id !== trackId) return t;
+          const newBand = { ...t.eq.bands[bandIndex], ...params };
+          // Auto-engage: any band edit that produces a non-zero gain flips
+          // the EQ on. Removes the "drag a node, hear nothing, click EQ,
+          // drag again" two-step after a fresh start or a RESET.
+          const autoEngage = !t.eq.enabled && newBand.gain !== 0;
+          return {
+            ...t,
+            eq: {
+              ...t.eq,
+              enabled: autoEngage ? true : t.eq.enabled,
+              bands: t.eq.bands.map((b, i) =>
+                i === bandIndex ? newBand : b,
+              ) as TrackEQ['bands'],
+            },
+          };
+        }),
       }));
       const { activeTrackId, tracks } = get();
       if (activeTrackId === trackId) {

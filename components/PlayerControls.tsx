@@ -221,7 +221,7 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
           <div className="hidden sm:block pipboy-screen flex-1 overflow-hidden relative self-stretch">
             <LEDDisplay
               label={activeTrack?.label ?? 'Load your tracks'}
-              color={activeTrack?.color ?? 'rgba(255,255,255,0.15)'}
+              color={activeTrack?.color ?? '#e8382c'}
               isPlaying={isPlaying}
               activeTrackId={activeTrackId}
               forceScroll={!activeTrack}

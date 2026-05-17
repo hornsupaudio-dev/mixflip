@@ -39,7 +39,7 @@ export default function NowPlayingStrip() {
     <div className="pipboy-screen relative h-9 overflow-hidden">
       <LEDDisplay
         label={label}
-        color={activeTrack?.color ?? 'rgba(255,255,255,0.15)'}
+        color={activeTrack?.color ?? '#e8382c'}
         isPlaying={isPlaying}
         activeTrackId={activeTrack?.id ?? null}
         forceScroll={!activeTrack}

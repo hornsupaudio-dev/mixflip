@@ -199,9 +199,6 @@ export default function SpectrumDisplay({ selectedBand, onSelectBand }: Props) {
     };
   }));
 
-  const resetTrackEQ  = useMixFlipStore((s) => s.resetTrackEQ);
-  const toggleTrackEQ = useMixFlipStore((s) => s.toggleTrackEQ);
-
   // ── Canvas drawing (RAF-driven, reads store directly) ─────────────────────
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -358,42 +355,6 @@ export default function SpectrumDisplay({ selectedBand, onSelectBand }: Props) {
   return (
     <div className="relative w-full h-full overflow-hidden">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
-
-      {/* Top-right floating EQ controls — phosphor-terminal style */}
-      {trackId && (
-        <div className="absolute top-1.5 right-1.5 flex items-center gap-2 z-20">
-          <button
-            onClick={() => resetTrackEQ(trackId)}
-            title="Reset all EQ bands to 0 dB"
-            aria-label="Reset EQ"
-            className="font-mono text-[9px] uppercase tracking-wider transition-opacity duration-150 hover:opacity-100"
-            style={{
-              color: `${color}66`,
-              background: 'transparent',
-              border: 'none',
-              padding: '1px 2px',
-              opacity: 0.85,
-            }}
-          >
-            Reset
-          </button>
-          <button
-            onClick={() => toggleTrackEQ(trackId)}
-            title={eqEnabled ? 'Bypass EQ' : 'Engage EQ'}
-            aria-label="Toggle EQ"
-            aria-pressed={eqEnabled}
-            className="px-1.5 py-[1px] font-mono text-[9px] uppercase tracking-wider rounded-[3px] transition-all duration-150"
-            style={{
-              background: eqEnabled ? `${color}30` : 'transparent',
-              color: eqEnabled ? color : `${color}66`,
-              border: `1px solid ${color}30`,
-              textShadow: eqEnabled ? `0 0 4px ${color}88` : 'none',
-            }}
-          >
-            EQ
-          </button>
-        </div>
-      )}
 
       {/* Draggable EQ band nodes */}
       {bands && trackId && cssDims.w > 0 && bands.map((band, i) => (

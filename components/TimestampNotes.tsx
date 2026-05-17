@@ -87,6 +87,10 @@ export default function TimestampNotes() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mode, setMode] = useState<ScreenMode>('notes');
   const [selectedBand, setSelectedBand] = useState<number | null>(null);
+  const [resetFlash, setResetFlash] = useState(false);
+
+  const resetTrackEQ  = useMixFlipStore((s) => s.resetTrackEQ);
+  const toggleTrackEQ = useMixFlipStore((s) => s.toggleTrackEQ);
 
   const currentTime = useSyncExternalStore(
     audioEngine.subscribeToTime,
@@ -95,6 +99,7 @@ export default function TimestampNotes() {
   );
 
   const activeTrack = tracks.find((t) => t.id === activeTrackId);
+  const eqEnabled = !!activeTrack?.eq.enabled;
   const isPinned = !!pinnedNotesTrackId;
   const notesTrack = isPinned
     ? (tracks.find((t) => t.id === pinnedNotesTrackId) ?? activeTrack)
@@ -222,7 +227,9 @@ export default function TimestampNotes() {
               {mode === 'notes' ? 'Notes' : 'Scope'}
             </span>
 
-            {/* Right cluster: band readout (scope only), count (notes only), toggle */}
+            {/* Right cluster: band readout (scope+selected) → RESET → EQ → toggle.
+                RESET and EQ stay put in both modes so positions don't shuffle
+                when you swap NOTES ↔ SCOPE. */}
             <div className="ml-auto flex items-center gap-2 shrink-0">
               {mode === 'scope' && selectedBand !== null && activeTrack && (
                 <BandReadout
@@ -238,6 +245,58 @@ export default function TimestampNotes() {
                   {notesTrack!.notes.length}
                 </span>
               )}
+
+              {/* RESET — momentary, flashes on press for feedback */}
+              <button
+                onClick={() => {
+                  if (!activeTrack) return;
+                  setResetFlash(true);
+                  resetTrackEQ(activeTrack.id);
+                  setTimeout(() => setResetFlash(false), 320);
+                }}
+                disabled={!activeTrack}
+                title="Reset all EQ bands to 0 dB"
+                aria-label="Reset EQ"
+                className="font-mono text-[8px] uppercase tracking-wider rounded-[3px] shrink-0"
+                style={{
+                  background: resetFlash ? `${phosphor}45` : 'transparent',
+                  color: resetFlash
+                    ? phosphor
+                    : activeTrack ? `${phosphor}70` : `${phosphor}25`,
+                  border: `1px solid ${resetFlash ? `${phosphor}90` : `${phosphor}30`}`,
+                  textShadow: resetFlash ? `0 0 6px ${phosphor}` : 'none',
+                  transform: resetFlash ? 'scale(0.94)' : 'scale(1)',
+                  transition: resetFlash
+                    ? 'transform 80ms ease-out, background 80ms, color 80ms, border-color 80ms, text-shadow 80ms'
+                    : 'transform 250ms ease-out, background 250ms, color 250ms, border-color 250ms, text-shadow 250ms',
+                  padding: '1px 6px',
+                  cursor: activeTrack ? 'pointer' : 'default',
+                }}
+              >
+                Reset
+              </button>
+
+              {/* EQ on/off toggle */}
+              <button
+                onClick={() => activeTrack && toggleTrackEQ(activeTrack.id)}
+                disabled={!activeTrack}
+                title={eqEnabled ? 'Bypass EQ' : 'Engage EQ'}
+                aria-label="Toggle EQ"
+                aria-pressed={eqEnabled}
+                className="font-mono text-[8px] uppercase tracking-wider rounded-[3px] shrink-0 transition-all duration-150 active:scale-95"
+                style={{
+                  background: eqEnabled ? `${phosphor}30` : 'transparent',
+                  color: eqEnabled
+                    ? phosphor
+                    : activeTrack ? `${phosphor}70` : `${phosphor}25`,
+                  border: `1px solid ${eqEnabled ? `${phosphor}55` : `${phosphor}30`}`,
+                  textShadow: eqEnabled ? `0 0 4px ${phosphor}88` : 'none',
+                  padding: '1px 6px',
+                  cursor: activeTrack ? 'pointer' : 'default',
+                }}
+              >
+                EQ
+              </button>
 
               {/* NOTES / SCOPE toggle */}
               <div

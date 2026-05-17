@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useMixFlipStore, type Track } from '@/store/mixflipStore';
 
@@ -40,10 +40,17 @@ export default function TrackSlotStrip({
     })),
   );
 
-  const [mixSlots, setMixSlots] = useState(() =>
-    readStored(storageKey, defaultMixSlots, totalSlots),
-  );
+  // Always initialise with the default so SSR and the first client render
+  // produce identical HTML (localStorage is unavailable on the server). The
+  // stored preference is restored in an effect right after mount.
+  const [mixSlots, setMixSlots] = useState(defaultMixSlots);
   const refSlots = totalSlots - mixSlots;
+
+  useEffect(() => {
+    const stored = readStored(storageKey, defaultMixSlots, totalSlots);
+    if (stored !== defaultMixSlots) setMixSlots(stored);
+    // Only re-run if the strip is reconfigured with different defaults/key
+  }, [storageKey, defaultMixSlots, totalSlots]);
 
   const mixInputRef = useRef<HTMLInputElement>(null);
   const refInputRef = useRef<HTMLInputElement>(null);

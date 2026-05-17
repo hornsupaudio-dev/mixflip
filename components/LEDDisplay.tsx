@@ -9,13 +9,15 @@ interface LEDDisplayProps {
   activeTrackId: string | null;
   fontFamily?: string;
   cellSize?: number;   // lit square side in CSS px (default 3)
+  /** Scroll regardless of isPlaying — useful for empty-state prompts. */
+  forceScroll?: boolean;
 }
 
 const GAP       = 1;
 const SPEED     = 50;
 const OFF_SCALE = 3;
 
-export default function LEDDisplay({ label, color, isPlaying, activeTrackId, fontFamily = '400 "Press Start 2P", monospace', cellSize = 3 }: LEDDisplayProps) {
+export default function LEDDisplay({ label, color, isPlaying, activeTrackId, fontFamily = '400 "Press Start 2P", monospace', cellSize = 3, forceScroll = false }: LEDDisplayProps) {
   const canvasRef  = useRef<HTMLCanvasElement>(null);
   const offRef     = useRef<HTMLCanvasElement | null>(null);
   const rafRef     = useRef<number>(0);
@@ -26,12 +28,14 @@ export default function LEDDisplay({ label, color, isPlaying, activeTrackId, fon
   const prevTrackRef = useRef<string | null>(null);
 
   const isPlayingRef   = useRef(isPlaying);
+  const forceScrollRef = useRef(forceScroll);
   const colorRef       = useRef(color);
   const cellSizeRef    = useRef(cellSize);
   const displaySizeRef = useRef({ w: 0, h: 0 });
   const offWRef        = useRef(0); // logical CSS-px loop length
 
   useEffect(() => { isPlayingRef.current = isPlaying; }, [isPlaying]);
+  useEffect(() => { forceScrollRef.current = forceScroll; }, [forceScroll]);
   useEffect(() => { colorRef.current = color; }, [color]);
   useEffect(() => { cellSizeRef.current = cellSize; }, [cellSize]);
 
@@ -166,7 +170,7 @@ export default function LEDDisplay({ label, color, isPlaying, activeTrackId, fon
   // ── Animation loop — raw float accumulation, snap happens in drawFrame ────
   useEffect(() => {
     const tick = (ts: number) => {
-      if (lastTsRef.current !== null && isPlayingRef.current) {
+      if (lastTsRef.current !== null && (isPlayingRef.current || forceScrollRef.current)) {
         offsetRef.current += (ts - lastTsRef.current) / 1000 * SPEED;
       }
       lastTsRef.current = ts;

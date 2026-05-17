@@ -47,6 +47,10 @@ export default function TrackSlotStrip({
 
   const mixInputRef = useRef<HTMLInputElement>(null);
   const refInputRef = useRef<HTMLInputElement>(null);
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  // Drag-resize state — set on pointerdown, consumed each pointermove
+  const dragRef = useRef<{ startX: number; startMix: number; slotPx: number } | null>(null);
 
   const mixTracks = tracks.filter((t) => t.type === 'mix').slice(0, mixSlots);
   const refTracks = tracks.filter((t) => t.type === 'reference').slice(0, refSlots);
@@ -70,6 +74,39 @@ export default function TrackSlotStrip({
     setMixSlots(next);
     saveStored(storageKey, next);
     vibrate();
+  };
+
+  // ── Drag-to-resize ──────────────────────────────────────────────────────────
+  // Drag the divider horizontally — each ~slot-width of travel shifts the
+  // split by one. The arrow buttons stay as the discrete tap fallback.
+  const startDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    const rect = strip.getBoundingClientRect();
+    // Approx slot width — strip minus the divider's 22 px column minus inter-item gaps.
+    // gap-1.5 = 6 px, totalSlots + 1 gaps (slots + divider between).
+    const gapsPx  = (totalSlots) * 6;
+    const slotPx  = Math.max(20, (rect.width - 22 - gapsPx) / totalSlots);
+    dragRef.current = { startX: e.clientX, startMix: mixSlots, slotPx };
+  };
+
+  const moveDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const s = dragRef.current;
+    if (!s) return;
+    const slotDelta = Math.round((e.clientX - s.startX) / s.slotPx);
+    const next = Math.max(1, Math.min(totalSlots - 1, s.startMix + slotDelta));
+    if (next !== mixSlots) {
+      setMixSlots(next);
+      saveStored(storageKey, next);
+      vibrate();
+    }
+  };
+
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    dragRef.current = null;
   };
 
   const renderSlot = (
@@ -150,7 +187,7 @@ export default function TrackSlotStrip({
   };
 
   return (
-    <div className={`flex items-stretch gap-1.5 h-11 ${className}`}>
+    <div ref={stripRef} className={`flex items-stretch gap-1.5 h-11 ${className}`}>
       {/* Hidden file pickers */}
       <input
         ref={mixInputRef}
@@ -168,10 +205,10 @@ export default function TrackSlotStrip({
         renderSlot(mixTracks[i] ?? null, 'mix', i, i === firstEmptyMix),
       )}
 
-      {/* Divider with ◄ / ► */}
-      <div className="flex flex-col items-center justify-between shrink-0 py-1" style={{ width: 18 }}>
+      {/* Divider — drag the line to resize, tap ◄ / ► for one-slot steps */}
+      <div className="flex flex-col items-center justify-between shrink-0 py-1" style={{ width: 22 }}>
         <button
-          onPointerDown={() => adjustMix(1)}
+          onPointerDown={(e) => { e.stopPropagation(); adjustMix(1); }}
           disabled={mixSlots >= totalSlots - 1}
           className="flex items-center justify-center leading-none"
           style={{
@@ -187,13 +224,28 @@ export default function TrackSlotStrip({
           aria-label="Add a mix slot"
         >◄</button>
 
+        {/* Drag handle — line in the middle is the visual; full 22 px column is the hit area */}
         <div
-          className="w-px flex-1 my-0.5"
-          style={{ background: 'linear-gradient(180deg, transparent, #3a342e 20%, #3a342e 80%, transparent)' }}
-        />
+          className="flex-1 my-0.5 relative w-full"
+          onPointerDown={startDrag}
+          onPointerMove={moveDrag}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          style={{ cursor: 'ew-resize', touchAction: 'none' }}
+          title="Drag to resize mix/ref split"
+          aria-label="Drag to resize mix versus reference split"
+        >
+          <div
+            className="absolute top-0 bottom-0 left-1/2 w-px pointer-events-none"
+            style={{
+              transform: 'translateX(-0.5px)',
+              background: 'linear-gradient(180deg, transparent, #3a342e 20%, #3a342e 80%, transparent)',
+            }}
+          />
+        </div>
 
         <button
-          onPointerDown={() => adjustMix(-1)}
+          onPointerDown={(e) => { e.stopPropagation(); adjustMix(-1); }}
           disabled={mixSlots <= 1}
           className="flex items-center justify-center leading-none"
           style={{

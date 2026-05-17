@@ -224,6 +224,7 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
               color={activeTrack?.color ?? 'rgba(255,255,255,0.15)'}
               isPlaying={isPlaying}
               activeTrackId={activeTrackId}
+              forceScroll={!activeTrack}
             />
           </div>
 

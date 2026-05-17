@@ -251,11 +251,17 @@ export default function TimestampNotes() {
                 if (!activeTrack) return;
                 setResetFlash(true);
                 resetTrackEQ(activeTrack.id);
+                // In notes mode, also bypass EQ. The user isn't looking at the
+                // spectrum so RESET reads as "kill the EQ entirely". In scope
+                // mode we keep EQ engaged so the user can immediately keep dialing.
+                if (mode === 'notes' && activeTrack.eq.enabled) {
+                  toggleTrackEQ(activeTrack.id);
+                }
                 setTimeout(() => setResetFlash(false), 320);
               }}
               disabled={!activeTrack}
-              title="Reset all EQ bands to 0 dB"
-              aria-label="Reset EQ"
+              title={mode === 'notes' ? 'Reset EQ bands and bypass' : 'Reset EQ bands to 0 dB'}
+              aria-label={mode === 'notes' ? 'Reset and bypass EQ' : 'Reset EQ bands'}
               className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider"
               style={{
                 background: resetFlash ? `${phosphor}45` : 'transparent',

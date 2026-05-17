@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { audioEngine } from '@/lib/audioEngine';
 import { useMixFlipStore } from '@/store/mixflipStore';
+import { buildTrackLabel } from '@/lib/trackLabel';
 import LEDDisplay from '@/components/LEDDisplay';
 
 function formatTime(seconds: number): string {
@@ -220,7 +221,7 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
           {/* LED dot-matrix display — desktop only; mobile uses NowPlayingStrip */}
           <div className="hidden sm:block pipboy-screen flex-1 overflow-hidden relative self-stretch">
             <LEDDisplay
-              label={activeTrack?.label ?? 'Load your tracks'}
+              label={activeTrack ? buildTrackLabel(activeTrack) : 'Load your tracks'}
               color={activeTrack?.color ?? '#e8382c'}
               isPlaying={isPlaying}
               activeTrackId={activeTrackId}

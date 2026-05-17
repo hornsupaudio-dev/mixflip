@@ -3,7 +3,6 @@
 import Header from '@/components/Header';
 import Waveform from '@/components/Waveform';
 import LevelMeter from '@/components/LevelMeter';
-import TrackInfo from '@/components/TrackInfo';
 import PlayerControls from '@/components/PlayerControls';
 import MonitoringBar from '@/components/MonitoringBar';
 import TimestampNotes from '@/components/TimestampNotes';
@@ -33,10 +32,9 @@ export default function Home() {
             <TrackSlotStrip totalSlots={10} defaultMixSlots={6} storageKey="mf-mix-slots-desktop" />
           </div>
 
-          {/* Mobile: NowPlayingStrip + file info above the waveform */}
-          <div className="sm:hidden shrink-0 flex flex-col gap-1.5">
+          {/* Mobile: NowPlayingStrip — LED marquee now carries the file info */}
+          <div className="sm:hidden shrink-0">
             <NowPlayingStrip />
-            <TrackInfo />
           </div>
 
           {/* Waveform — always visible */}
@@ -45,9 +43,8 @@ export default function Home() {
           {/* Stereo level meter — RMS bars + peak ticks + clip LED */}
           <LevelMeter />
 
-          {/* Desktop: TrackInfo + Player + Monitoring */}
+          {/* Desktop: Player + Monitoring (LED marquee carries the file info) */}
           <div className="hidden sm:flex flex-col gap-4">
-            <TrackInfo />
             <PlayerControls />
             <MonitoringBar />
           </div>

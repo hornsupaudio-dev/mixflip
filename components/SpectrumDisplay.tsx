@@ -7,17 +7,17 @@ import { audioEngine } from '@/lib/audioEngine';
 import { getSpectrumAvg, updateSpectrumAvg } from '@/lib/audioStore';
 
 // ── Constants ───────────────────────────────────────────────────────────────
-const SPEC_MIN_DB = -75;
+const SPEC_MIN_DB = -55;  // taller peaks; raised from -75
 const EQ_RANGE_DB = 15;
 const F_MIN = 20;
 const F_MAX = 20000;
 
 // Per-band freq clamps + which bands accept Q adjustment (peaking only)
-const BANDS = [
-  { freqMin: 20,   freqMax: 800,   peaking: false }, // lo shelf
-  { freqMin: 80,   freqMax: 3000,  peaking: true  }, // lo mid
-  { freqMin: 500,  freqMax: 12000, peaking: true  }, // hi mid
-  { freqMin: 1500, freqMax: 20000, peaking: false }, // hi shelf
+export const BAND_DEFS = [
+  { name: 'LO SHELF', freqMin: 20,   freqMax: 800,   peaking: false },
+  { name: 'LO MID',   freqMin: 80,   freqMax: 3000,  peaking: true  },
+  { name: 'HI MID',   freqMin: 500,  freqMax: 12000, peaking: true  },
+  { name: 'HI SHELF', freqMin: 1500, freqMax: 20000, peaking: false },
 ] as const;
 
 const logMin = Math.log10(F_MIN);
@@ -25,7 +25,6 @@ const logMax = Math.log10(F_MAX);
 
 const freqToFrac = (f: number) => (Math.log10(f) - logMin) / (logMax - logMin);
 
-// Linear interpolation between adjacent FFT bins (in dB space)
 function binAt(bins: Float32Array, binF: number): number {
   if (bins.length === 0) return -120;
   const clamped = Math.max(0, Math.min(bins.length - 1.001, binF));
@@ -35,9 +34,15 @@ function binAt(bins: Float32Array, binF: number): number {
   return bins[b0] * (1 - t) + bins[b1] * t;
 }
 
+interface Props {
+  selectedBand: number | null;
+  onSelectBand: (i: number | null) => void;
+}
+
 // ── Draggable EQ node ───────────────────────────────────────────────────────
 function EQNode({
   bandIndex, freq, gain, q, containerW, containerH, color, enabled, trackId,
+  isSelected, onSelect,
 }: {
   bandIndex: number;
   freq: number;
@@ -48,11 +53,20 @@ function EQNode({
   color: string;
   enabled: boolean;
   trackId: string;
+  isSelected: boolean;
+  onSelect: () => void;
 }) {
   const setTrackEQ = useMixFlipStore((s) => s.setTrackEQ);
   const toggleTrackEQ = useMixFlipStore((s) => s.toggleTrackEQ);
-  const def = BANDS[bandIndex];
+  const def = BAND_DEFS[bandIndex];
   const [dragging, setDragging] = useState(false);
+  const nodeRef = useRef<HTMLDivElement>(null);
+
+  // Refs for stable native event listener closure
+  const qRef = useRef(q);
+  const enabledRef = useRef(enabled);
+  useEffect(() => { qRef.current = q; }, [q]);
+  useEffect(() => { enabledRef.current = enabled; }, [enabled]);
 
   const x = freqToFrac(freq) * containerW;
   const y = containerH / 2 - (gain / EQ_RANGE_DB) * (containerH / 2);
@@ -60,7 +74,7 @@ function EQNode({
   const dragStart = useRef<{ x: number; y: number; freq: number; gain: number } | null>(null);
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Tap a node when EQ is bypassed → engage EQ so the user sees the effect
+    onSelect();
     if (!enabled) {
       toggleTrackEQ(trackId);
       return;
@@ -98,35 +112,42 @@ function EQNode({
     setDragging(false);
   };
 
-  // Scroll wheel on a peaking band adjusts Q (bandwidth)
-  const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!enabled || !def.peaking) return;
-    e.preventDefault();
-    const step = e.shiftKey ? 0.5 : 0.1;
-    const delta = e.deltaY > 0 ? -step : step;
-    const newQ = Math.max(0.3, Math.min(8, q + delta));
-    if (newQ !== q) setTrackEQ(trackId, bandIndex, { q: Math.round(newQ * 100) / 100 });
-  };
-
-  // Double-click resets this band
   const onDoubleClick = () => {
     setTrackEQ(trackId, bandIndex, { gain: 0 });
   };
 
-  const size = dragging ? 18 : 13;
-  const tooltip = `Band ${bandIndex + 1}: ${freq < 1000 ? Math.round(freq) + ' Hz' : (freq / 1000).toFixed(2) + ' kHz'} · ${gain >= 0 ? '+' : ''}${gain.toFixed(1)} dB${def.peaking ? ` · Q ${q.toFixed(1)}` : ''}`;
+  // Native, non-passive wheel listener so preventDefault actually stops
+  // the page from scrolling under the cursor.
+  useEffect(() => {
+    const el = nodeRef.current;
+    if (!el) return;
+    const handler = (e: WheelEvent) => {
+      if (!enabledRef.current || !def.peaking) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const step = e.shiftKey ? 0.5 : 0.1;
+      const delta = e.deltaY > 0 ? -step : step;
+      const newQ = Math.max(0.3, Math.min(8, qRef.current + delta));
+      if (newQ !== qRef.current) {
+        setTrackEQ(trackId, bandIndex, { q: Math.round(newQ * 100) / 100 });
+      }
+    };
+    el.addEventListener('wheel', handler, { passive: false });
+    return () => el.removeEventListener('wheel', handler);
+  }, [bandIndex, def.peaking, trackId, setTrackEQ]);
+
+  const size = dragging ? 18 : isSelected ? 15 : 13;
 
   return (
     <div
+      ref={nodeRef}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
-      onWheel={onWheel}
       onDoubleClick={onDoubleClick}
-      title={tooltip}
       role="slider"
-      aria-label={`EQ band ${bandIndex + 1} — drag to adjust frequency and gain`}
+      aria-label={`EQ band ${bandIndex + 1}`}
       aria-valuenow={Math.round(gain)}
       aria-valuemin={-12}
       aria-valuemax={12}
@@ -143,8 +164,12 @@ function EQNode({
         boxShadow: enabled
           ? (dragging
               ? `0 0 12px ${color}, 0 0 24px ${color}66, inset 0 0 4px rgba(255,255,255,0.4)`
-              : `0 0 5px ${color}aa`)
-          : 'none',
+              : isSelected
+                ? `0 0 0 3px rgba(245,236,220,0.25), 0 0 7px ${color}cc`
+                : `0 0 5px ${color}aa`)
+          : isSelected
+            ? `0 0 0 3px rgba(245,236,220,0.18)`
+            : 'none',
         opacity: enabled ? 1 : 0.55,
         touchAction: 'none',
         zIndex: 10,
@@ -155,7 +180,7 @@ function EQNode({
 }
 
 // ── Public component ────────────────────────────────────────────────────────
-export default function SpectrumDisplay() {
+export default function SpectrumDisplay({ selectedBand, onSelectBand }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cssDims, setCssDims] = useState({ w: 0, h: 0 });
 
@@ -261,7 +286,6 @@ export default function SpectrumDisplay() {
           return ch - ((db - SPEC_MIN_DB) / -SPEC_MIN_DB) * ch;
         };
 
-        // Filled ambient haze
         ctx.beginPath();
         for (let x = 0; x < cw; x++) {
           const binF = (freqs[x] / nyquist) * binCount;
@@ -274,7 +298,6 @@ export default function SpectrumDisplay() {
         ctx.fillStyle = `${c}22`;
         ctx.fill();
 
-        // Running-average curve
         const avg = t?.id ? getSpectrumAvg(t.id) : undefined;
         if (avg && avg.n > 4) {
           ctx.beginPath();
@@ -305,7 +328,7 @@ export default function SpectrumDisplay() {
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      // ── Frequency labels (subtle, bottom) ─────────────────────────────
+      // ── Frequency labels ─────────────────────────────────────────────
       ctx.fillStyle = 'rgba(255,240,220,0.16)';
       ctx.font = `${Math.max(8, Math.floor(8 * (window.devicePixelRatio || 1)))}px var(--font-mono), monospace`;
       ctx.textBaseline = 'bottom';
@@ -358,7 +381,7 @@ export default function SpectrumDisplay() {
         </div>
       )}
 
-      {/* Draggable EQ band nodes (Pro-Q3 style) */}
+      {/* Draggable EQ band nodes */}
       {bands && trackId && cssDims.w > 0 && bands.map((band, i) => (
         <EQNode
           key={i}
@@ -371,6 +394,8 @@ export default function SpectrumDisplay() {
           color={color}
           enabled={eqEnabled}
           trackId={trackId}
+          isSelected={selectedBand === i}
+          onSelect={() => onSelectBand(i)}
         />
       ))}
     </div>

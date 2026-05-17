@@ -4,9 +4,55 @@ import { useState, useRef, useEffect, useSyncExternalStore } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { audioEngine } from '@/lib/audioEngine';
 import { useMixFlipStore } from '@/store/mixflipStore';
-import SpectrumDisplay from '@/components/SpectrumDisplay';
+import SpectrumDisplay, { BAND_DEFS } from '@/components/SpectrumDisplay';
 
 type ScreenMode = 'notes' | 'scope';
+
+// Inline freq/gain/Q readout for the currently selected EQ band
+function BandReadout({
+  band, bandIndex, trackId, color,
+}: {
+  band: { freq: number; gain: number; q: number };
+  bandIndex: number;
+  trackId: string;
+  color: string;
+}) {
+  const setTrackEQ = useMixFlipStore((s) => s.setTrackEQ);
+  const def = BAND_DEFS[bandIndex];
+
+  const fmtFreq = (hz: number) =>
+    hz < 1000 ? `${Math.round(hz)}` : `${(hz / 1000).toFixed(hz < 10000 ? 2 : 1).replace(/\.?0+$/, '')}k`;
+  const fmtGain = (db: number) => `${db >= 0 ? '+' : ''}${db.toFixed(1)}`;
+
+  return (
+    <div
+      className="flex items-center gap-2 font-mono text-[9px] uppercase tracking-wider shrink-0"
+      style={{ color }}
+    >
+      <span className="opacity-50">{def.name}</span>
+      <span className="tabular-nums" style={{ minWidth: 38, textAlign: 'right' }}>
+        {fmtFreq(band.freq)}Hz
+      </span>
+      <span className="tabular-nums" style={{ minWidth: 40, textAlign: 'right' }}>
+        {fmtGain(band.gain)}dB
+      </span>
+      {def.peaking && (
+        <>
+          <span className="opacity-50">Q</span>
+          <input
+            type="range" min="0.3" max="8" step="0.1"
+            value={band.q}
+            onChange={(e) => setTrackEQ(trackId, bandIndex, { q: parseFloat(e.target.value) })}
+            className="hw-slider"
+            style={{ width: 56 }}
+            aria-label={`${def.name} Q`}
+          />
+          <span className="tabular-nums opacity-70" style={{ minWidth: 18 }}>{band.q.toFixed(1)}</span>
+        </>
+      )}
+    </div>
+  );
+}
 
 function formatTime(seconds: number): string {
   const s = Math.max(0, seconds);
@@ -46,6 +92,7 @@ export default function TimestampNotes() {
   const [litNotes, setLitNotes] = useState<Set<string>>(new Set());
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mode, setMode] = useState<ScreenMode>('notes');
+  const [selectedBand, setSelectedBand] = useState<number | null>(null);
 
   const currentTime = useSyncExternalStore(
     audioEngine.subscribeToTime,
@@ -166,8 +213,8 @@ export default function TimestampNotes() {
         {/* ── Left column: header + list + input ────────────────────────── */}
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
 
-          {/* Header: dot + label + mode toggle + (count in notes mode) */}
-          <div className="notes-screen-header flex items-center gap-2">
+          {/* Header: dot + label + (band readout in scope) + mode toggle */}
+          <div className="notes-screen-header flex items-center gap-2 flex-wrap">
             <span
               className="w-1.5 h-1.5 rounded-full shrink-0"
               style={{ backgroundColor: phosphor, boxShadow: isActive ? `0 0 6px ${phosphor}` : 'none' }}
@@ -178,47 +225,59 @@ export default function TimestampNotes() {
                 : `— : ${mode === 'notes' ? 'Notes' : 'Scope'}`}
             </span>
 
-            {/* NOTES / SCOPE toggle */}
-            <div
-              className="flex items-center rounded-[3px] overflow-hidden shrink-0 ml-auto"
-              style={{ border: `1px solid ${phosphor}30` }}
-              role="tablist"
-              aria-label="Screen mode"
-            >
-              <button
-                onClick={() => setMode('notes')}
-                className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
-                style={{
-                  background: mode === 'notes' ? `${phosphor}30` : 'transparent',
-                  color: mode === 'notes' ? phosphor : `${phosphor}60`,
-                  textShadow: mode === 'notes' ? `0 0 4px ${phosphor}88` : 'none',
-                }}
-                role="tab"
-                aria-selected={mode === 'notes'}
-              >
-                Notes
-              </button>
-              <div className="w-px h-3" style={{ background: `${phosphor}30` }} />
-              <button
-                onClick={() => setMode('scope')}
-                className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
-                style={{
-                  background: mode === 'scope' ? `${phosphor}30` : 'transparent',
-                  color: mode === 'scope' ? phosphor : `${phosphor}60`,
-                  textShadow: mode === 'scope' ? `0 0 4px ${phosphor}88` : 'none',
-                }}
-                role="tab"
-                aria-selected={mode === 'scope'}
-              >
-                Scope
-              </button>
-            </div>
+            {/* Right cluster: band readout (scope only), count (notes only), toggle */}
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              {mode === 'scope' && selectedBand !== null && activeTrack && (
+                <BandReadout
+                  band={activeTrack.eq.bands[selectedBand]}
+                  bandIndex={selectedBand}
+                  trackId={activeTrack.id}
+                  color={phosphor}
+                />
+              )}
 
-            {mode === 'notes' && hasNotes && (
-              <span className="font-mono text-[10px] shrink-0" style={{ color: `${phosphor}45` }}>
-                {notesTrack!.notes.length}
-              </span>
-            )}
+              {mode === 'notes' && hasNotes && (
+                <span className="font-mono text-[10px] shrink-0" style={{ color: `${phosphor}45` }}>
+                  {notesTrack!.notes.length}
+                </span>
+              )}
+
+              {/* NOTES / SCOPE toggle */}
+              <div
+                className="flex items-center rounded-[3px] overflow-hidden shrink-0"
+                style={{ border: `1px solid ${phosphor}30` }}
+                role="tablist"
+                aria-label="Screen mode"
+              >
+                <button
+                  onClick={() => setMode('notes')}
+                  className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
+                  style={{
+                    background: mode === 'notes' ? `${phosphor}30` : 'transparent',
+                    color: mode === 'notes' ? phosphor : `${phosphor}60`,
+                    textShadow: mode === 'notes' ? `0 0 4px ${phosphor}88` : 'none',
+                  }}
+                  role="tab"
+                  aria-selected={mode === 'notes'}
+                >
+                  Notes
+                </button>
+                <div className="w-px h-3" style={{ background: `${phosphor}30` }} />
+                <button
+                  onClick={() => setMode('scope')}
+                  className="px-1.5 py-[1px] font-mono text-[8px] uppercase tracking-wider transition-all duration-150"
+                  style={{
+                    background: mode === 'scope' ? `${phosphor}30` : 'transparent',
+                    color: mode === 'scope' ? phosphor : `${phosphor}60`,
+                    textShadow: mode === 'scope' ? `0 0 4px ${phosphor}88` : 'none',
+                  }}
+                  role="tab"
+                  aria-selected={mode === 'scope'}
+                >
+                  Scope
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Body — notes list + input, OR interactive EQ-on-spectrum scope */}
@@ -227,7 +286,10 @@ export default function TimestampNotes() {
               className="flex-1 mt-2 relative"
               style={{ zIndex: 5, minHeight: 200 }}
             >
-              <SpectrumDisplay />
+              <SpectrumDisplay
+                selectedBand={selectedBand}
+                onSelectBand={setSelectedBand}
+              />
             </div>
           ) : (
           <>

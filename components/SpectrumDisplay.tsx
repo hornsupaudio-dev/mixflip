@@ -354,6 +354,19 @@ export default function SpectrumDisplay({ selectedBand, onSelectBand }: Props) {
     <div className="relative w-full h-full overflow-hidden">
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
 
+      {/* Empty-state ghost text — phosphor dead-color matches the notes
+          screen's inactive treatment so the scope doesn't read as broken. */}
+      {!trackId && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <span
+            className="font-mono text-[10px] uppercase"
+            style={{ color: '#3a342e', letterSpacing: '0.32em' }}
+          >
+            insert source
+          </span>
+        </div>
+      )}
+
       {/* Draggable EQ band nodes */}
       {bands && trackId && cssDims.w > 0 && bands.map((band, i) => (
         <EQNode

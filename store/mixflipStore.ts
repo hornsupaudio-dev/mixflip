@@ -46,7 +46,9 @@ export interface Track {
 }
 
 const MIX_COLORS = ['#3b82f6', '#a855f7', '#22c55e', '#f59e0b', '#ec4899'];
-const REF_COLOR = '#6b7280';
+// Desaturated cool tones for refs — read as "neutral / external" but still
+// distinguish R1 from R2 from R3 at a glance in the slot strip and waveform.
+const REF_COLORS = ['#94a3b8', '#a8a29e', '#8b9cab', '#b1a89a'];
 
 interface MixFlipState {
   tracks: Track[];
@@ -59,6 +61,7 @@ interface MixFlipState {
   /** Saved playback position for the reference group. */
   savedRefTime: number;
   colorCursor: number;
+  refColorCursor: number;
   /** Most recently active track in each group — restored on switchGroup(). */
   lastActiveMixId: string | null;
   lastActiveRefId: string | null;
@@ -126,6 +129,7 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
     savedMixTime: 0,
     savedRefTime: 0,
     colorCursor: 0,
+    refColorCursor: 0,
     lastActiveMixId: null,
     lastActiveRefId: null,
     monoEnabled: false,
@@ -143,11 +147,13 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
 
     addTracks: (files, type = 'mix') => {
       const state = get();
+      let refCursorOffset = 0;
+      let mixCursorOffset = 0;
       const newTracks: Track[] = files.map((file) => {
         const color =
           type === 'reference'
-            ? REF_COLOR
-            : MIX_COLORS[state.colorCursor % MIX_COLORS.length];
+            ? REF_COLORS[(state.refColorCursor + refCursorOffset++) % REF_COLORS.length]
+            : MIX_COLORS[(state.colorCursor + mixCursorOffset++) % MIX_COLORS.length];
         return {
           id: crypto.randomUUID(),
           label: file.name.replace(/\.[^/.]+$/, ''),
@@ -169,11 +175,13 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
         tracks: [...s.tracks, ...newTracks],
         activeTrackId: s.activeTrackId ?? newTracks[0]?.id ?? null,
         activeGroup: s.activeTrackId ? s.activeGroup : (newTracks[0] ? type : s.activeGroup),
-        colorCursor: type === 'mix' ? s.colorCursor + files.length : s.colorCursor,
+        colorCursor:    type === 'mix'       ? s.colorCursor    + files.length : s.colorCursor,
+        refColorCursor: type === 'reference' ? s.refColorCursor + files.length : s.refColorCursor,
       }));
 
-      // Flash the VolMatch button on every import as a hint
-      get().triggerVolMatchPulse();
+      // Flash the VolMatch button on every import as a hint — but only when
+      // it isn't already engaged (otherwise the pulse is pure noise).
+      if (!get().volumeMatchEnabled) get().triggerVolMatchPulse();
 
       newTracks.forEach((track, i) => {
         audioEngine.decodeFile(files[i]).then((buffer) => {
@@ -273,11 +281,14 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
             ? {
                 ...t,
                 type,
-                color: type === 'reference' ? REF_COLOR : MIX_COLORS[s.colorCursor % MIX_COLORS.length],
+                color: type === 'reference'
+                  ? REF_COLORS[s.refColorCursor % REF_COLORS.length]
+                  : MIX_COLORS[s.colorCursor % MIX_COLORS.length],
               }
             : t,
         ),
-        colorCursor: type === 'mix' ? s.colorCursor + 1 : s.colorCursor,
+        colorCursor:    type === 'mix'       ? s.colorCursor    + 1 : s.colorCursor,
+        refColorCursor: type === 'reference' ? s.refColorCursor + 1 : s.refColorCursor,
         // Keep activeGroup in sync if we're retyping the active track
         activeGroup: id === s.activeTrackId ? type : s.activeGroup,
       })),

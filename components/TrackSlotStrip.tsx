@@ -31,14 +31,32 @@ function saveStored(key: string, n: number) {
 export default function TrackSlotStrip({
   totalSlots, defaultMixSlots, storageKey, className = '',
 }: Props) {
-  const { tracks, activeTrackId, addTracks, setActiveTrack } = useMixFlipStore(
+  const { tracks, activeTrackId, addTracks, setActiveTrack, removeTrack } = useMixFlipStore(
     useShallow((s) => ({
       tracks: s.tracks,
       activeTrackId: s.activeTrackId,
       addTracks: s.addTracks,
       setActiveTrack: s.setActiveTrack,
+      removeTrack: s.removeTrack,
     })),
   );
+
+  // Long-press / right-click → confirm remove. ref keyed by track id so a
+  // press that crosses slot boundaries doesn't fire on the wrong track.
+  const longPressRef = useRef<{ trackId: string; timer: number } | null>(null);
+
+  const cancelLongPress = () => {
+    if (longPressRef.current) {
+      clearTimeout(longPressRef.current.timer);
+      longPressRef.current = null;
+    }
+  };
+
+  const promptRemove = (track: Track) => {
+    if (typeof window !== 'undefined' && window.confirm(`Remove "${track.label}"?`)) {
+      removeTrack(track.id);
+    }
+  };
 
   // Always initialise with the default so SSR and the first client render
   // produce identical HTML (localStorage is unavailable on the server). The
@@ -155,8 +173,28 @@ export default function TrackSlotStrip({
     return (
       <button
         key={`${type}-${i}`}
-        onPointerDown={() => { vibrate(); if (!isLoading) setActiveTrack(track!.id); }}
-        title={track!.label}
+        onPointerDown={() => {
+          vibrate();
+          if (!isLoading) setActiveTrack(track!.id);
+          // Start a long-press timer for the remove action (touch users)
+          cancelLongPress();
+          longPressRef.current = {
+            trackId: track!.id,
+            timer: window.setTimeout(() => {
+              longPressRef.current = null;
+              promptRemove(track!);
+            }, 650),
+          };
+        }}
+        onPointerUp={cancelLongPress}
+        onPointerLeave={cancelLongPress}
+        onPointerCancel={cancelLongPress}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          cancelLongPress();
+          promptRemove(track!);
+        }}
+        title={`${track!.label}  (long-press / right-click to remove)`}
         aria-label={`${label}: ${track!.label}${isActive ? ' (active)' : ''}`}
         aria-pressed={isActive}
         className={['btn-3d flex-1 justify-center relative', isActive ? 'btn-3d-on' : ''].join(' ')}

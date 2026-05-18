@@ -798,3 +798,16 @@ body::after {
       drop-shadow(0 0 6px rgba(232, 160, 74, 0.30));
   }
 }
+
+/* Clip LED: brief flicker on attack, then latched solid for the hold time.
+   Mimics a real LED that takes a moment to "settle" full brightness. */
+@keyframes clip-flicker {
+  0%   { filter: brightness(0.4); }
+  18%  { filter: brightness(2);   }
+  32%  { filter: brightness(0.6); }
+  55%  { filter: brightness(1.7); }
+  100% { filter: brightness(1);   }
+}
+.clip-led-attack {
+  animation: clip-flicker 220ms linear;
+}

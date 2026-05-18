@@ -33,7 +33,8 @@ export default function Header() {
             <Kbd k="Space" label="Play / pause" />
             <Kbd k="1–8" label="Switch track" />
             <Kbd k="Tab" label="Cycle next" />
-            <Kbd k="\" label="Switch group" />
+            <Kbd k="\" label="Toggle group" />
+            <Kbd k="M / R" label="Jump mix / ref" />
             <Kbd k="← →" label="Seek ±5 s" />
             <Kbd k="N" label="Add note" />
           </div>

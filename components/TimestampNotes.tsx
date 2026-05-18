@@ -89,6 +89,19 @@ export default function TimestampNotes() {
   const [selectedBand, setSelectedBand] = useState<number | null>(null);
   const [resetFlash, setResetFlash] = useState(false);
 
+  // Global "N" shortcut: jump to notes mode and focus the input
+  useEffect(() => {
+    const handler = () => {
+      setMode('notes');
+      // Wait a tick so the input is in the DOM if we just switched modes
+      setTimeout(() => {
+        document.querySelector<HTMLInputElement>('.notes-screen-input input')?.focus();
+      }, 0);
+    };
+    window.addEventListener('mixflip:focus-note-input', handler);
+    return () => window.removeEventListener('mixflip:focus-note-input', handler);
+  }, []);
+
   const resetTrackEQ  = useMixFlipStore((s) => s.resetTrackEQ);
   const toggleTrackEQ = useMixFlipStore((s) => s.toggleTrackEQ);
 

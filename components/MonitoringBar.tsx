@@ -69,7 +69,7 @@ export default function MonitoringBar() {
           <button
             onClick={toggleVolumeMatch}
             className={['btn-3d btn-3d-led', volumeMatchEnabled ? 'btn-3d-on' : '', volMatchPulsing && !volumeMatchEnabled ? 'btn-volmatch-pulse' : ''].join(' ')}
-            title="LUFS volume matching — match every track to the same loudness"
+            title="LUFS volume matching: matches every track to the same loudness"
             aria-label="LUFS volume matching"
             aria-pressed={volumeMatchEnabled}
           >
@@ -79,7 +79,7 @@ export default function MonitoringBar() {
           <button
             onClick={toggleMono}
             className={['btn-3d btn-3d-led', monoEnabled ? 'btn-3d-on' : ''].join(' ')}
-            title="Mono fold — collapse stereo to mono to check phase"
+            title="Mono fold: collapses stereo to mono to check phase"
             aria-label="Mono fold"
             aria-pressed={monoEnabled}
           >
@@ -118,23 +118,28 @@ export default function MonitoringBar() {
             )}
           </button>
 
-          {/* Wet/dry chevron — only visible when a sim is active */}
-          {simActive && (
-            <button
-              onClick={() => setWetDryOpen((v) => !v)}
-              className={['btn-3d btn-3d-led px-2.5', wetDryOpen ? 'btn-3d-on' : ''].join(' ')}
-              title={wetDryOpen ? 'Hide wet/dry' : 'Show wet/dry'}
-              aria-label="Toggle wet/dry mix slider"
-              aria-expanded={wetDryOpen}
+          {/* Wet/dry chevron — always mounted to keep layout stable;
+              opacity-fades to invisible when no sim is active. */}
+          <button
+            onClick={() => simActive && setWetDryOpen((v) => !v)}
+            className={['btn-3d btn-3d-led px-2.5', wetDryOpen ? 'btn-3d-on' : ''].join(' ')}
+            title={wetDryOpen ? 'Hide wet/dry' : 'Show wet/dry'}
+            aria-label="Toggle wet/dry mix slider"
+            aria-expanded={wetDryOpen}
+            aria-hidden={!simActive}
+            style={{
+              opacity: simActive ? 1 : 0,
+              pointerEvents: simActive ? 'auto' : 'none',
+              transition: 'opacity 200ms ease-out',
+            }}
+          >
+            <svg
+              width="10" height="6" viewBox="0 0 10 6" fill="none"
+              style={{ transform: wetDryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
             >
-              <svg
-                width="10" height="6" viewBox="0 0 10 6" fill="none"
-                style={{ transform: wetDryOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }}
-              >
-                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          )}
+              <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
 
         </div>
 

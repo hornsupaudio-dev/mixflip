@@ -1,6 +1,6 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { audioEngine, type MeterSnapshot } from '@/lib/audioEngine';
 
 const SILENT: MeterSnapshot = {
@@ -78,6 +78,20 @@ export default function LevelMeter() {
   const peakMax = Math.max(m.holdL, m.holdR);
   const hot = peakMax > -0.1;
 
+  // Trigger the LED flicker animation only on the rising edge of m.clip,
+  // not for the whole hold duration.
+  const [flicker, setFlicker] = useState(false);
+  const prevClip = useRef(false);
+  useEffect(() => {
+    if (m.clip && !prevClip.current) {
+      setFlicker(true);
+      const t = setTimeout(() => setFlicker(false), 240);
+      prevClip.current = true;
+      return () => clearTimeout(t);
+    }
+    if (!m.clip) prevClip.current = false;
+  }, [m.clip]);
+
   return (
     <div
       className="flex items-center gap-2.5 px-3 py-2 rounded-lg shrink-0"
@@ -111,8 +125,8 @@ export default function LevelMeter() {
       </div>
 
       <div
-        className="shrink-0 rounded-full"
-        title={m.clip ? 'Clipping — signal hit 0 dBFS' : 'Clip indicator'}
+        className={['shrink-0 rounded-full', flicker ? 'clip-led-attack' : ''].join(' ')}
+        title={m.clip ? 'Clipping: signal hit 0 dBFS' : 'Clip indicator'}
         style={{
           width: 8, height: 8,
           background: m.clip ? '#ff4a3a' : '#2a1410',

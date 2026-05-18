@@ -32,7 +32,9 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
   const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
   const duration = activeTrack?.duration ?? 0;
   const hasBuffer = !!activeTrackId && !activeTrack?.isLoading;
-  const hasBothGroups = tracks.some((t) => t.type === 'mix') && tracks.some((t) => t.type === 'reference');
+  const hasMixes = tracks.some((t) => t.type === 'mix');
+  const hasRefs  = tracks.some((t) => t.type === 'reference');
+  const hasBothGroups = hasMixes && hasRefs;
 
   const liveTime = useSyncExternalStore(
     audioEngine.subscribeToTime,
@@ -126,6 +128,29 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
         case 'ArrowRight':
           if (hasBuffer && duration > 0) seek(Math.min(duration, liveTime + 5));
           break;
+        case 'n':
+        case 'N':
+          // Jump to notes mode + focus the input — was advertised in
+          // Shortcuts panel but never wired.
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('mixflip:focus-note-input'));
+          break;
+        case 'r':
+        case 'R':
+          // Jump to the reference group (if not already on it)
+          if (hasRefs && activeGroup !== 'reference') {
+            e.preventDefault();
+            switchGroup();
+          }
+          break;
+        case 'm':
+        case 'M':
+          // Jump to the mix group (if not already on it)
+          if (hasMixes && activeGroup !== 'mix') {
+            e.preventDefault();
+            switchGroup();
+          }
+          break;
         default:
           if (e.code === 'Backslash' && hasBothGroups) {
             switchGroup();
@@ -141,7 +166,7 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [noKeyboard, hasBuffer, liveTime, duration, togglePlay, seek, cycleTrack, switchGroup, activeGroup, hasBothGroups]);
+  }, [noKeyboard, hasBuffer, liveTime, duration, togglePlay, seek, cycleTrack, switchGroup, activeGroup, hasBothGroups, hasMixes, hasRefs]);
 
   return (
     <div className="flex items-center gap-4">

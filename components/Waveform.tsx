@@ -229,14 +229,20 @@ export default function Waveform() {
               <span
                 className="font-mono text-sm uppercase tracking-[0.18em]"
                 style={{
-                  color: fileDragging ? 'rgba(255,255,255,0.55)' : labelHover ? 'rgba(255,255,255,0.48)' : 'rgba(255,255,255,0.22)',
+                  color: fileDragging ? 'rgba(255,200,150,0.75)' : labelHover ? 'rgba(255,255,255,0.48)' : 'rgba(255,255,255,0.22)',
                   transition: 'color 150ms',
                 }}
               >
-                Load Your Mixes
+                {fileDragging ? 'Drop to Load' : 'Load Your Mixes'}
               </span>
-              <span className="font-mono text-[10px] uppercase tracking-widest text-white/15">
-                drag files here or click to browse
+              <span
+                className="font-mono text-[10px] uppercase tracking-widest"
+                style={{
+                  color: fileDragging ? 'rgba(255,200,150,0.4)' : 'rgba(255,255,255,0.15)',
+                  transition: 'color 150ms',
+                }}
+              >
+                {fileDragging ? 'release to add as mix' : 'drag files here or click to browse'}
               </span>
               <span className="font-mono text-[9px] tracking-wider" style={{ color: 'rgba(255,255,255,0.08)' }}>
                 MP3 · WAV · FLAC · AIFF · M4A

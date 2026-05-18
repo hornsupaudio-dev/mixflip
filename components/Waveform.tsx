@@ -17,15 +17,30 @@ export default function Waveform() {
   // Increments on every resize so canvas effects re-run after dimensions settle
   const [dimsKey, setDimsKey] = useState(0);
 
-  const { tracks, activeTrackId, isPlaying, seek, addTracks, setHoveredNoteId } = useMixFlipStore(useShallow((s) => ({
+  const {
+    tracks, activeTrackId, isPlaying, seek, addTracks, setHoveredNoteId,
+    sections, addSection, removeSection,
+  } = useMixFlipStore(useShallow((s) => ({
     tracks: s.tracks,
     activeTrackId: s.activeTrackId,
     isPlaying: s.isPlaying,
     seek: s.seek,
     addTracks: s.addTracks,
     setHoveredNoteId: s.setHoveredNoteId,
+    sections: s.sections,
+    addSection: s.addSection,
+    removeSection: s.removeSection,
   })));
   const activeTrack = tracks.find((t) => t.id === activeTrackId) ?? null;
+
+  // Long-press timer for deleting a section bar (touch)
+  const sectionLongPressRef = useRef<number | null>(null);
+  const cancelSectionLongPress = () => {
+    if (sectionLongPressRef.current !== null) {
+      clearTimeout(sectionLongPressRef.current);
+      sectionLongPressRef.current = null;
+    }
+  };
 
   const [fileDragging, setFileDragging] = useState(false);
   const [scrubbing, setScrubbing] = useState(false);
@@ -126,8 +141,29 @@ export default function Waveform() {
       ctx.fill();
     }
 
+    // ── Section markers (A, B, C, ...) — tall amber lines with letter tabs */
+    if (sections.length > 0) {
+      const tabH = 13;
+      const tabW = 14;
+      const sectionColor = '#e8a04a';
+      sections.forEach((sec, idx) => {
+        if (sec.time < 0 || sec.time > activeTrack.duration) return;
+        const x = (sec.time / activeTrack.duration) * width;
+        // Thin full-height bar below the tab
+        ctx.fillStyle = sectionColor;
+        ctx.fillRect(Math.round(x) - 0.5, tabH, 1.5, height - tabH);
+        // Tab at top with letter inside
+        ctx.fillRect(x - tabW / 2, 0, tabW, tabH);
+        ctx.fillStyle = '#1a1410';
+        ctx.font = 'bold 9px "JetBrains Mono", ui-monospace, monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String.fromCharCode(65 + idx), x, tabH / 2 + 0.5);
+      });
+    }
+
     ctx.restore();
-  }, [dimsKey, currentTime, activeTrackId, activeTrack?.duration, activeTrack?.color, activeTrack?.notes]);
+  }, [dimsKey, currentTime, activeTrackId, activeTrack?.duration, activeTrack?.color, activeTrack?.notes, sections]);
 
   const getTimeFromPointer = useCallback((clientX: number): number => {
     const canvas = fgCanvasRef.current;
@@ -136,13 +172,37 @@ export default function Waveform() {
     return Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)) * activeTrack.duration;
   }, [activeTrack?.duration]);
 
+  // Find a section near a given clientX (within ±12 px). Returns null if none.
+  const sectionAtPointer = useCallback((clientX: number) => {
+    const canvas = fgCanvasRef.current;
+    if (!canvas || !activeTrack || activeTrack.duration <= 0) return null;
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const HIT_PX = 12;
+    return sections.find((s) => {
+      const sx = (s.time / activeTrack.duration) * rect.width;
+      return Math.abs(x - sx) <= HIT_PX;
+    }) ?? null;
+  }, [sections, activeTrack?.duration]);
+
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (!activeTrack || activeTrack.duration <= 0) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const t = getTimeFromPointer(e.clientX);
     setScrubbing(true);
     if (!isPlaying) audioEngine.previewSeek(t);
-  }, [activeTrack?.duration, isPlaying, getTimeFromPointer]);
+    // Touch: if pointer landed on a section bar, arm a long-press for delete
+    const sec = sectionAtPointer(e.clientX);
+    if (sec) {
+      cancelSectionLongPress();
+      sectionLongPressRef.current = window.setTimeout(() => {
+        sectionLongPressRef.current = null;
+        const idx = sections.indexOf(sec);
+        const label = idx >= 0 ? String.fromCharCode(65 + idx) : '?';
+        if (window.confirm(`Delete section ${label}?`)) removeSection(sec.id);
+      }, 650);
+    }
+  }, [activeTrack?.duration, isPlaying, getTimeFromPointer, sectionAtPointer, sections, removeSection]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
     if (scrubbing) {
@@ -164,12 +224,33 @@ export default function Waveform() {
   }, [scrubbing, isPlaying, getTimeFromPointer, activeTrack?.duration, activeTrack?.notes, setHoveredNoteId]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+    cancelSectionLongPress();
     if (!scrubbing) return;
     setScrubbing(false);
     seek(getTimeFromPointer(e.clientX));
   }, [scrubbing, getTimeFromPointer, seek]);
 
+  // Double-click empty waveform area → add a section there.
+  // If you double-click ON an existing section, no-op (the dedup in the
+  // store catches the duplicate but skip the visual flash either way).
+  const handleDoubleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!activeTrack || activeTrack.duration <= 0) return;
+    if (sectionAtPointer(e.clientX)) return;
+    addSection(getTimeFromPointer(e.clientX));
+  }, [activeTrack?.duration, sectionAtPointer, getTimeFromPointer, addSection]);
+
+  // Right-click on a section → confirm + delete (desktop)
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const sec = sectionAtPointer(e.clientX);
+    if (!sec) return;
+    e.preventDefault();
+    const idx = sections.indexOf(sec);
+    const label = idx >= 0 ? String.fromCharCode(65 + idx) : '?';
+    if (window.confirm(`Delete section ${label}?`)) removeSection(sec.id);
+  }, [sectionAtPointer, sections, removeSection]);
+
   const handlePointerLeave = useCallback(() => {
+    cancelSectionLongPress();
     if (!scrubbing) setHoveredNoteId(null);
   }, [scrubbing, setHoveredNoteId]);
 
@@ -263,7 +344,10 @@ export default function Waveform() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={cancelSectionLongPress}
         onPointerLeave={handlePointerLeave}
+        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
       />
     </div>
   );

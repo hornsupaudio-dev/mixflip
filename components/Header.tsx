@@ -37,7 +37,12 @@ export default function Header() {
             <Kbd k="M / R" label="Jump mix / ref" />
             <Kbd k="← →" label="Seek ±5 s" />
             <Kbd k="N" label="Add note" />
+            <Kbd k="A–H" label="Jump section" />
           </div>
+          <p className="mt-3 text-white/35 text-[10px] font-mono leading-relaxed">
+            Double-click the waveform to add a section.
+            Long-press / right-click a section to remove it.
+          </p>
         </div>
       )}
     </header>

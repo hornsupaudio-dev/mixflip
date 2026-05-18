@@ -346,18 +346,33 @@ class AudioEngine {
 
   // Apply 4-band EQ settings to the persistent filter nodes.
   // enabled=false zeros all gains (transparent pass-through) without disconnecting.
-  setEQ(bands: EQBandParams[], enabled: boolean) {
+  // instant=true snaps values without a ramp — used on track switch so the
+  // listener doesn't hear EQ values sweeping from track A to track B during
+  // the crossfade. Ramped (default) for live param edits to avoid zipper.
+  setEQ(bands: EQBandParams[], enabled: boolean, instant = false) {
     if (this._eqBands.length === 0) return; // graph not yet built
     const now = this._ctx?.currentTime ?? 0;
-    const TC = 0.015; // 15 ms ramp — instant but click-free
+    const TC = 0.015; // 15 ms ramp — fast but click-free
     this._eqBands.forEach((node, i) => {
       const band = bands[i];
       if (!band) return;
-      node.frequency.setTargetAtTime(band.freq, now, TC);
-      node.gain.setTargetAtTime(enabled ? band.gain : 0, now, TC);
-      // Q only matters for peaking; shelves use their built-in slope
-      if (node.type === 'peaking') {
-        node.Q.setTargetAtTime(Math.max(0.1, band.q), now, TC);
+      const gainTarget = enabled ? band.gain : 0;
+      const qTarget = Math.max(0.1, band.q);
+      if (instant) {
+        node.frequency.cancelScheduledValues(now);
+        node.gain.cancelScheduledValues(now);
+        node.frequency.setValueAtTime(band.freq, now);
+        node.gain.setValueAtTime(gainTarget, now);
+        if (node.type === 'peaking') {
+          node.Q.cancelScheduledValues(now);
+          node.Q.setValueAtTime(qTarget, now);
+        }
+      } else {
+        node.frequency.setTargetAtTime(band.freq, now, TC);
+        node.gain.setTargetAtTime(gainTarget, now, TC);
+        if (node.type === 'peaking') {
+          node.Q.setTargetAtTime(qTarget, now, TC);
+        }
       }
     });
   }

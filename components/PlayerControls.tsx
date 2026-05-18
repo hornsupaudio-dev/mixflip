@@ -160,6 +160,17 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
             );
             const track = groupTracks[parseInt(e.key) - 1];
             if (track) useMixFlipStore.getState().setActiveTrack(track.id);
+          } else if (e.key.length === 1) {
+            // Section jump (A–H). Excludes R / M / N which are already cases above.
+            const upper = e.key.toUpperCase();
+            if (upper >= 'A' && upper <= 'H') {
+              const idx = upper.charCodeAt(0) - 'A'.charCodeAt(0);
+              const sections = useMixFlipStore.getState().sections;
+              if (sections[idx] && hasBuffer) {
+                e.preventDefault();
+                seek(sections[idx].time);
+              }
+            }
           }
       }
     };
@@ -177,7 +188,7 @@ export default function PlayerControls({ noKeyboard = false }: { noKeyboard?: bo
         className={[
           'w-16 h-16 rounded-full flex items-center justify-center shrink-0 select-none',
           hasBuffer
-            ? ['play-btn', isPlaying ? 'play-btn-playing' : ''].join(' ')
+            ? ['play-btn', isPlaying ? 'play-btn-playing' : 'play-btn-loaded'].join(' ')
             : 'cursor-not-allowed opacity-20 bg-[#1d1a16] border border-[#0d0b09]',
         ].join(' ')}
         title={isPlaying ? 'Pause (Space)' : 'Play (Space)'}

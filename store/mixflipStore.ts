@@ -29,6 +29,15 @@ export interface TimestampNote {
   text: string;
 }
 
+// Section markers — global to the session (all loaded tracks are the same
+// song, so the same time stamps apply to all of them). Letter labels are
+// derived from order: index 0 = A, 1 = B, ...
+export interface Section {
+  id: string;
+  time: number;
+}
+export const MAX_SECTIONS = 8;  // matches A–H keyboard shortcuts
+
 export interface Track {
   id: string;
   label: string;
@@ -80,6 +89,8 @@ interface MixFlipState {
   refPulsing: boolean;
   /** Fires briefly after each import to draw attention to the VolMatch button */
   volMatchPulsing: boolean;
+  /** Section markers shared across all loaded tracks of this session */
+  sections: Section[];
 
   addTracks: (files: File[], type?: TrackType) => void;
   removeTrack: (id: string) => void;
@@ -91,6 +102,9 @@ interface MixFlipState {
   addNote: (trackId: string, text: string, time: number) => void;
   removeNote: (trackId: string, noteId: string) => void;
   updateNote: (trackId: string, noteId: string, text: string) => void;
+
+  addSection: (time: number) => void;
+  removeSection: (id: string) => void;
 
   setTrackEQ: (trackId: string, bandIndex: number, params: Partial<EQBandParams>) => void;
   toggleTrackEQ: (trackId: string) => void;
@@ -142,6 +156,7 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
     refPulsing: false,
     volMatchPulsing: false,
     pinnedNotesTrackId: null,
+    sections: [],
 
     // ── Track management ──────────────────────────────────────────────────────
 
@@ -202,7 +217,10 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
       set((s) => {
         const remaining = s.tracks.filter((t) => t.id !== id);
         const unpinNotes = s.pinnedNotesTrackId === id ? { pinnedNotesTrackId: null } : {};
-        if (s.activeTrackId !== id) return { tracks: remaining, ...unpinNotes };
+        // Clear sections when no tracks remain — they're song-scoped, and
+        // a fresh load probably means a different song.
+        const clearSections = remaining.length === 0 ? { sections: [] } : {};
+        if (s.activeTrackId !== id) return { tracks: remaining, ...unpinNotes, ...clearSections };
 
         // Prefer same-group track; fall back to any remaining track
         const sameGroup = remaining.filter((t) => t.type === s.activeGroup);
@@ -212,6 +230,7 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
           activeTrackId: next?.id ?? null,
           activeGroup: next?.type ?? s.activeGroup,
           ...unpinNotes,
+          ...clearSections,
         };
       });
     },
@@ -229,8 +248,10 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
         ? { lastActiveMixId: id }
         : { lastActiveRefId: id };
 
-      // Apply EQ for the incoming track before any playback change
-      audioEngine.setEQ(newTrack.eq.bands, newTrack.eq.enabled);
+      // Apply EQ for the incoming track before any playback change.
+      // instant=true so EQ values don't audibly sweep from old track's
+      // settings to new track's settings during the crossfade.
+      audioEngine.setEQ(newTrack.eq.bands, newTrack.eq.enabled, true);
 
       if (switchingGroup) {
         const currentPos = audioEngine.getPosition();
@@ -306,6 +327,21 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
       }));
     },
 
+    addSection: (time) => {
+      set((s) => {
+        if (s.sections.length >= MAX_SECTIONS) return s;
+        // Dedup if a section already exists within ~0.25 s of this time
+        if (s.sections.some((sec) => Math.abs(sec.time - time) < 0.25)) return s;
+        const next: Section = { id: crypto.randomUUID(), time };
+        return {
+          sections: [...s.sections, next].sort((a, b) => a.time - b.time),
+        };
+      });
+    },
+
+    removeSection: (id) =>
+      set((s) => ({ sections: s.sections.filter((sec) => sec.id !== id) })),
+
     removeNote: (trackId, noteId) =>
       set((s) => ({
         tracks: s.tracks.map((t) =>
@@ -333,9 +369,10 @@ export const useMixFlipStore = create<MixFlipState>((set, get) => {
       const startPos = activeGroup === 'mix' ? savedMixTime : savedRefTime;
       const effectiveGain = volumeMatchEnabled ? track.gainDb : 0;
       // Order matters: play() builds the audio graph if it doesn't exist yet.
-      // Apply EQ AFTER, so the filter nodes definitely exist.
+      // Apply EQ AFTER, so the filter nodes definitely exist. Instant snap
+      // since this is the first audible moment — no prior state to ramp from.
       audioEngine.play(buffer, effectiveGain, startPos);
-      audioEngine.setEQ(track.eq.bands, track.eq.enabled);
+      audioEngine.setEQ(track.eq.bands, track.eq.enabled, true);
       set({ isPlaying: true });
     },
 

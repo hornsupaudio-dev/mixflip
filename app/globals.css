@@ -231,6 +231,12 @@ body::after {
     animation: play-breathe 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
+  /* Slow, dim "tube at standby" pulse when a track is loaded but paused —
+     signals "ready, warmed up" without competing with the active state. */
+  .play-btn-loaded {
+    animation: play-breathe-idle 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  }
+
   .play-icon-pulse {
     animation: icon-breathe 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
@@ -796,6 +802,27 @@ body::after {
     filter:
       drop-shadow(0 0 3px rgba(232, 192, 122, 0.55))
       drop-shadow(0 0 6px rgba(232, 160, 74, 0.30));
+  }
+}
+
+/* Idle (loaded but paused) — ~half the amber, slower cadence */
+@keyframes play-breathe-idle {
+  0%, 100% {
+    box-shadow:
+      inset 0 0 0 1px #0d0b09,
+      inset 0 0 4px 1px rgba(232, 160, 74, 0.03),
+      0 4px 0 #0a0908,
+      0 5px 0 #060504,
+      0 7px 20px rgba(0, 0, 0, 0.7);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px #0d0b09,
+      inset 0 0 8px 2px rgba(232, 160, 74, 0.11),
+      0 4px 0 #0a0908,
+      0 5px 0 #060504,
+      0 7px 20px rgba(0, 0, 0, 0.7),
+      0 0 4px 1px rgba(232, 160, 74, 0.12);
   }
 }
 
